@@ -42,7 +42,7 @@ cd ..
 @REM COPY *.JAR
 xcopy "%frame_work%\%lib%\*" "%web-inf%\%lib%\" /s /i /y
 
-@REM COPY *.class
+@REM COPY *.CLASS
 xcopy "%frame_work%\%bin%" "%classes%\" /s /i /y
 setlocal
 for /d %%D in ("%classes%\%package%\*") do (
