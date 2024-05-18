@@ -8,7 +8,8 @@ set "test=test"
 set "temp_src=temp_src"
 set "bin=bin"
 set "lib=lib"
-set "src=src\mg\itu"
+set "package=mg\itu"
+set "src=src\%package%"
 set "xml=web.xml"
 
 set "main=test"
@@ -40,6 +41,20 @@ cd ..
 
 @REM COPY *.JAR
 xcopy "%frame_work%\%lib%\*" "%web-inf%\%lib%\" /s /i /y
+
+@REM COPY *.class
+xcopy "%frame_work%\%bin%" "%classes%\" /s /i /y
+setlocal
+for /d %%D in ("%classes%\%package%\*") do (
+    for %%N in ("%%~nxD") do (  REM Extraire le nom du dossier
+        if not "%%~N" == "Controllers" (
+            rd /s /q "%%D"
+            echo Dossier "%%D" ont eters supprimee ...
+        )
+    )
+)
+endlocal
+
 
 @REM COPY web.xml _______
 if exist %web-inf%/%xml% rmdir /s /q %web-inf%/%xml%
