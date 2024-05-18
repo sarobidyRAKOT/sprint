@@ -6,10 +6,18 @@
     https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd">
 
     <servlet>
+
+        <init-param>
+        <!-- mifandray an le fonction init (...) an am controller -->
+            <param-name>package_controllers</param-name> <!---->
+            <param-value>mg.itu.Controllers</param-value> <!--nom package -->
+        </init-param>
+        <!-- Declaration -->
         <servlet-name>Front_controller</servlet-name>
-        <servlet-class>mg.itu.prom16.Front_controller</servlet-class>
+        <servlet-class>mg.itu.servlets.Front_controller</servlet-class>
     </servlet>
     <servlet-mapping>
+        <!-- mapping an le servlet -->
         <servlet-name>Front_controller</servlet-name>
         <url-pattern>/</url-pattern>
     </servlet-mapping>
