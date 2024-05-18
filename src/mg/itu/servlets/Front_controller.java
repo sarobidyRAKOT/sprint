@@ -17,7 +17,6 @@ import mg.itu.annotation.*;
 
 public class Front_controller  extends HttpServlet {
 
-    private boolean controller_checked = false;
     protected String package_name;
     protected ArrayList <Class <?>> list_controllers;
 
@@ -36,12 +35,10 @@ public class Front_controller  extends HttpServlet {
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
 
-        if (!controller_checked) {
 
-            // CHECK CONTROLLER _______
-            this.list_controllers = new ArrayList <Class <?>> ();
-            this.check_controller();
-        }
+        // CHECK CONTROLLER _______
+        this.list_controllers = new ArrayList <Class <?>> ();
+        this.check_controller();
 
         try (PrintWriter out = response.getWriter()) {
             out.println(request.getRequestURL()+"</br>");
