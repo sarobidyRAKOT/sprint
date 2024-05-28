@@ -15,4 +15,10 @@ public class Mapping {
         return "class:["+this.class_name+"] methode:["+this.methode_name+"]";
     }
 
+    public String getClass_name() {
+        return class_name;
+    }
+    public String getMethode_name() {
+        return methode_name;
+    }
 }

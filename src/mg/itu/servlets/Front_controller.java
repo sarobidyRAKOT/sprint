@@ -12,11 +12,13 @@ import jakarta.servlet.http.*;
 
 import mg.itu.annotation.*;
 import mg.itu.beans.Mapping;
+import mg.itu.reflect.Reflexion;
 
 public class Front_controller  extends HttpServlet {
 
     protected String package_name;
     protected HashMap <String, Mapping> lists;
+    protected Reflexion reflexion;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -26,6 +28,7 @@ public class Front_controller  extends HttpServlet {
          */
         super.init(config);
         this.package_name = config.getInitParameter("package_controllers");
+        reflexion = new Reflexion();
         lists = new HashMap <String, Mapping> ();
         this.check_controller(package_name);
     }
@@ -39,13 +42,26 @@ public class Front_controller  extends HttpServlet {
         // CHECK CONTROLLER _______
 
         try (PrintWriter out = response.getWriter()) {
-            out.println(request.getRequestURL() +"</br>");
+            out.println(request.getRequestURL() +"</br></br>");
             
-            String mapp = this.get_dernier_uri(request.getRequestURI());
-
+            String mapp = "/"+this.get_dernier_uri(request.getRequestURI());
             Mapping mapping = lists.get(mapp);
             if (mapping != null) {
-                out.println("<b> uri:["+mapp+"] "+mapping.toString()+"</b>");
+
+                out.println("<b> uri:["+mapp+"] "+mapping.toString()+"</b> </br>");
+                reflexion = new Reflexion();
+
+                String classe_name = this.package_name+"."+mapping.getClass_name();
+                Class <?> classe = Class.forName(classe_name);
+                
+                @SuppressWarnings("deprecation")
+                Object objcet = classe.newInstance(); // nouveau instance pour l'object controlleur
+
+                String test = (String) reflexion.execute_METHODE(objcet, mapping.getMethode_name(), null);     
+                out.println("RESULTATS :"+ test);    
+                    
+                
+
             } else {
                 out.println("<b>tsy misy</b>");
             }
@@ -104,7 +120,7 @@ public class Front_controller  extends HttpServlet {
             for (Method method : methods) {
                 if (method.isAnnotationPresent(Get.class)) {
                     Get get = method.getAnnotation(Get.class);
-                    this.lists.put(get.url(), new Mapping(classe.getSimpleName(), method.getName()));
+                    this.lists.put(get.value(), new Mapping(classe.getSimpleName(), method.getName()));
                 } // else SKIP _______
             }
         }
