@@ -10,7 +10,7 @@ public class Reflexion {
         /** maka anaran le objet en parametre... */
         return object.getClass().getSimpleName();
     }
-
+    
     
     public Class <?>[] get_paramsTYPE (Object[] params) {
         /** maka type[] object  */
