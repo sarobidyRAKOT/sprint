@@ -35,7 +35,7 @@ echo CONFIGURATION en cours
 echo CONPILATION terminer
 
 @REM CONVERTIR JAR _______
-if exist "%lib%/%frame_work%.jar" del "%lib%/%frame_work%.jar"
+if exist "%lib%\%frame_work%.jar" del "%lib%\%frame_work%.jar"
 jar cvf "%lib%/%frame_work%.jar" -C %bin% .
 cd ..
 
