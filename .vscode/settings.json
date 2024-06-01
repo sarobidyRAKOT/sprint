@@ -1,0 +1,11 @@
+{
+    "java.project.referencedLibraries": {
+        "include": [
+            "lib/**/*.jar",
+            "d:\\STADY\\IT University\\Semestre 4\\INF 209 Web dynamique - (Mr Naina)\\SPRINT\\lib\\servlet-api.jar"
+        ],
+        "exclude": [
+            "lib/sprint.jar"
+        ]
+    }
+}

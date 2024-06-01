@@ -12,6 +12,7 @@ import jakarta.servlet.http.*;
 
 import mg.itu.annotation.*;
 import mg.itu.beans.Mapping;
+import mg.itu.beans.ModelView;
 import mg.itu.reflect.Reflexion;
 
 public class Front_controller  extends HttpServlet {
@@ -37,36 +38,23 @@ public class Front_controller  extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("text/html;charset=UTF-8");
-
-
-        // CHECK CONTROLLER _______
-
-        try (PrintWriter out = response.getWriter()) {
-            out.println(request.getRequestURL() +"</br></br>");
+        
+        PrintWriter out = response.getWriter();
+        out.println(request.getRequestURL() +"<h1>Front Controller</h1>");
             
-            String mapp = "/"+this.get_dernier_uri(request.getRequestURI());
-            Mapping mapping = lists.get(mapp);
-            if (mapping != null) {
-
-                out.println("<b> uri:["+mapp+"] "+mapping.toString()+"</b> </br>");
-                reflexion = new Reflexion();
-
-                String classe_name = this.package_name+"."+mapping.getClass_name();
-                Class <?> classe = Class.forName(classe_name);
-                
-                Object object = classe.getDeclaredConstructor().newInstance();
-                String test = (String) reflexion.execute_METHODE(object, mapping.getMethode_name(), null);     
-                
-                out.println("RESULTATS :"+ test);    
-
-            } else {
-                out.println("<b>tsy misy</b>");
-            }
-            
-        } catch (Exception exception) {
-            exception.printStackTrace();
+        String mapp = "/"+this.get_dernier_uri(request.getRequestURI());
+        Mapping mapping = lists.get(mapp);
+        if (mapping != null) {   
+            traite_mapping(mapping, request, response);
+        } else {
+            RequestDispatcher dispatcher = request.getRequestDispatcher("autre_pages/ctrl_invalid.jsp");
+            request.setAttribute("mapp", mapp);
+            dispatcher.forward(request, response);
         }
+        out.close();
     }
+
+
     private String get_dernier_uri (String request_uri) {
         int indexlast_slash = request_uri.lastIndexOf('/');
         if (indexlast_slash == -1) {
@@ -75,6 +63,47 @@ public class Front_controller  extends HttpServlet {
         } else {
             return request_uri.substring(indexlast_slash+1);
         } 
+    }
+
+    
+
+    private void traite_mapping (Mapping mapping, HttpServletRequest request, HttpServletResponse response) {
+        
+        String ctrl_className = this.package_name+"."+mapping.getClass_name();
+        RequestDispatcher dispatcher = null;
+        try {
+            Class <?> ctrl_class = Class.forName(ctrl_className);
+            Object controller = ctrl_class.getDeclaredConstructor().newInstance();
+            Object obj_retour = reflexion.execute_METHODE(controller, mapping.getMethode_name(), null);
+            if (obj_retour  instanceof ModelView) {
+                // traitement model view
+                ModelView model_view = (ModelView) obj_retour;
+    
+                dispatcher = request.getRequestDispatcher(model_view.getUrl());
+                model_view.getData().forEach((cle, valeur) -> {
+                    request.setAttribute(cle, valeur);
+                });
+            } else if (obj_retour instanceof String) {
+                dispatcher = request.getRequestDispatcher("pages/aff_string.jsp");
+                request.setAttribute("value", obj_retour.toString());
+            } else {
+                dispatcher = request.getRequestDispatcher("autre_pages/non_reconnu.jsp");
+                request.setAttribute("value", "Non Reconnu");
+            }
+            dispatcher.forward(request, response);
+        } catch (Exception e) {
+            /**
+             // EXCEPTION : 
+             * InstantiationException, 
+             * IllegalAccessException, 
+             * IllegalArgumentException, 
+             * InvocationTargetException, 
+             * NoSuchMethodException, 
+             * SecurityException
+             */
+            // e.printStackTrace();
+            e.printStackTrace();
+        }
     }
 
 
@@ -118,7 +147,6 @@ public class Front_controller  extends HttpServlet {
                 if (method.isAnnotationPresent(Get.class)) {
                     Get get = method.getAnnotation(Get.class);
                     this.lists.put(get.value(), new Mapping(classe.getSimpleName(), method.getName()));
-                    System.out.println(get.value());
                 } // else SKIP _______
             }
         }
