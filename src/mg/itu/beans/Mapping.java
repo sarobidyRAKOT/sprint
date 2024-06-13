@@ -1,13 +1,18 @@
 package mg.itu.beans;
 
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+
 public class Mapping {
     
     protected String class_name;
     protected String methode_name;
+    protected ArrayList <Parameter> params;
 
-    public Mapping (String classs, String method) {
+    public Mapping (String classs, String method, ArrayList <Parameter> parametres) {
         this.class_name = classs;
         this.methode_name = method;
+        this.params = parametres;
     }
 
     @Override
@@ -21,5 +26,9 @@ public class Mapping {
     public String getMethode_name() {
         return methode_name;
     }
+    public ArrayList <Parameter> getParams() {
+        return params;
+    }
+
 
 }

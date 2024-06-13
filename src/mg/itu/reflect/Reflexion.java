@@ -6,6 +6,7 @@ import java.util.ArrayList;
 
 public class Reflexion {
     
+
     public String get_nomClasse (Object object) {
         /** maka anaran le objet en parametre... */
         return object.getClass().getSimpleName();
@@ -60,6 +61,17 @@ public class Reflexion {
     public Object execute_METHODE (Object object, String methode_name, Object[] params) throws Exception {
         Class <?> clazz = object.getClass();
         Class <?>[] type_params = this.get_paramsTYPE(params);
+        try {
+            Method method = clazz.getDeclaredMethod(methode_name, type_params);
+            return method.invoke(object, params); // appeller la methode
+        } catch (NoSuchMethodException | SecurityException e) {
+            /// throws Exception
+            throw e; 
+        }
+    }
+
+    public Object execute_METHODE (Object object, String methode_name, Class<?>[] type_params, Object[] params) throws Exception {
+        Class <?> clazz = object.getClass();
         try {
             Method method = clazz.getDeclaredMethod(methode_name, type_params);
             return method.invoke(object, params); // appeller la methode

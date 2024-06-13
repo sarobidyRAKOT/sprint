@@ -26,4 +26,7 @@ inclure tous les library :
          Les méthodes des controlleurs qui seront annotées ont pour type de retour "String" ou "ModelView"
 - sprint 5:
    Rh misy url mitov d manao Exception, rh ohtr k tss anilay package controller d misy Exception,na ko oe vide n ao anatinilay package de misy Exception, d n type de retour an fonction rh ohtr k ts mitov amin String na ModelView d misy Exception ko
-   
+- sprint 6:
+   methode get avec params
+   utilisation: /uri?param1=value&&param2=value
+   * on separe les parametres par '&&' et on met '?' avant d'ajouter les parametres
