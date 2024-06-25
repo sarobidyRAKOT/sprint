@@ -10,9 +10,9 @@ set "bin=bin"
 set "lib=lib"
 set "package=mg\itu"
 set "src=src\%package%"
+set "lib_test=test\lib"
 
 @REM config ENVIRONEMENT _______
-@REM call config/build_test.bat
 mkdir %temp_src%
 mkdir %bin%
 
@@ -23,7 +23,9 @@ echo COMPILATION en cours
         copy "%%i" "%temp_src%"
     )
     rem _______ compilaton _______
-    javac -cp ../lib/* -d bin temp_src/*.java 
+    javac -d bin -cp .;lib/* temp_src/*.java
+    @REM javac -d bin -cp lib/paranamer-2.8.jar;lib/servlet-api.jar temp_src/*.java
+    @REM javac -g -d %BIN_DIR% -cp "lib/*" %SRC_DIR%\**\*.java
 echo CONPILATION terminer
 
 @REM @REM CONVERTIR JAR _______
@@ -35,4 +37,9 @@ rmdir /s /q %temp_src%
 rmdir /s /q %bin%
 
 
-pause
+@rem COPY lib framework _______
+cd ..
+dir
+xcopy "%frame_work%\%lib%\*" "%lib_test%\" /s /i /y
+move sprint.jar "%lib_test%\"
+

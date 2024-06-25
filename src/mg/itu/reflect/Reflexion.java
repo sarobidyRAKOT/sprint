@@ -53,7 +53,7 @@ public class Reflexion {
             method.invoke(object, params); // appeller la methode
         } catch (NoSuchMethodException | SecurityException e) {
             /// throws Exception
-            throw e; 
+            throw e;
         }
     }
 

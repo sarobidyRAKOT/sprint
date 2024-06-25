@@ -29,4 +29,17 @@ inclure tous les library :
 - sprint 6:
    methode get avec params
    utilisation: /uri?param1=value&&param2=value
-   * on separe les parametres par '&&' et on met '?' avant d'ajouter les parametres
+   * on separe les parametres par '&' et on met '?' avant d'ajouter les parametres
+   * on utilise une library Paranamer
+   * tsy afak manao type de parametre sarotr be fa int, double, String, Byte,... (type date tsy mety)
+- Strint 7:
+   
+
+   * Objet atao parametre:
+      - Fields: Annoter attr na mitovy am an am formulaire fotsin
+      - Method setter tsy maints String parametre, de ny nom method: set+attribut_name(attribut_name-> majuscul ny voloany)
+      - Tsy maintsy manan constructeur par defaut
+
+
+## REGLE POUR LE DEVELOPPEUR...
+>
