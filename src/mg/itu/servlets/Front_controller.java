@@ -1,27 +1,30 @@
 package mg.itu.servlets;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.nio.file.*;
 import java.util.*;
+
+import com.thoughtworks.paranamer.AdaptiveParanamer;
+import com.thoughtworks.paranamer.Paranamer;
+
 import java.net.*;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import mg.itu.Err.Errors;
 import mg.itu.annotation.*;
-import mg.itu.beans.Mapping;
-import mg.itu.beans.ModelView;
-import mg.itu.beans.Param;
+import mg.itu.beans.*;
 import mg.itu.reflect.Reflexion;
 
-public class Front_controller  extends HttpServlet {
+public class Front_controller extends HttpServlet {
 
     protected String package_name;
     protected HashMap <String, Mapping> do_gets;
-    // protected HashMap <String, Mapping> do_posts;
+    protected HashMap <String, Mapping> do_posts;
     protected Reflexion reflexion;
     private boolean init_error = false;
     protected Error error;
@@ -43,7 +46,7 @@ public class Front_controller  extends HttpServlet {
             this.package_name.isEmpty();
             reflexion = new Reflexion();
             do_gets = new HashMap <String, Mapping> ();
-            // do_posts = new HashMap <String, Mapping> ();
+            do_posts = new HashMap <String, Mapping> ();
 
             this.check_controller(package_name);
         } catch (URISyntaxException | IOException e) {
@@ -82,16 +85,12 @@ public class Front_controller  extends HttpServlet {
 
     private Mapping get_mapping (String mapp) {
         Mapping mapping = null;
-        mapping = do_gets.get(mapp);
-
-        // if (get) {
-        //     // sila METHODE est get
-        //     mapping = do_gets.get(mapp);
-        // } else if (post) {
-        //     // sila METHODE est post
-        //     mapping = do_posts.get(mapp);
-        // }
-
+        if (get) {
+            mapping = do_gets.get(mapp);
+        } 
+        else if (post) {
+            mapping = do_posts.get(mapp);
+        }
         return mapping;
     }
 
@@ -117,15 +116,16 @@ public class Front_controller  extends HttpServlet {
             // ef tsy misy exception ny init sy ny
             // controller noforonon le olona
             // traitement_uri(mapp);
-            
             try {
-                String key = "/"+this.get_dernier_uri(request.getRequestURI());
-                ArrayList <Param> params = traitement_params(request.getQueryString());
-                
+                String key = "/"+this.get_dernier_uri(request.getRequestURI()); // uri
+                ArrayList <Key_value> params_Key_values = traitement_params(request.getQueryString()); // params
+                // for (Key_value key_value : params_Key_values) {
+                //     System.out.println(key_value.toString());
+                // }
                 Mapping mapping = get_mapping(key);
                 if (mapping != null) {
                     // misy le mapping
-                    traite_mapping(mapping, params, request, response);
+                    traite_mapping(mapping, params_Key_values, request, response);
                 } else {
                     dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
                     String err = "l'URL "+request.getRequestURL()+" est introuvable\r\n"+
@@ -145,30 +145,30 @@ public class Front_controller  extends HttpServlet {
     }
 
     
-    private ArrayList <Param> traitement_params (String string_params) throws Errors {
-
+    private ArrayList <Key_value> traitement_params (String string_params) throws Errors {
         /**
          * mamerina null null le string_params
          * sinon ArrayList Param (key, value)
          */
-        ArrayList <Param> parametres = null;
 
+        ArrayList <Key_value> key_values = null;
         if (string_params != null && string_params.length() > 0) {
-            String[] params = string_params.split("&&");
-            parametres = new ArrayList <Param> (params.length);
-
+            String[] params = string_params.split("&");
+            
+            key_values = new ArrayList <Key_value> (params.length);
             for (String param : params) {
                 String[] key_value = param.split("=");
-                if (key_value.length == 2) {
-                    // key value parfait
-                    /** REHEFA TSY key, value de tsy mety */                
-                    parametres.add(new Param(key_value[0], key_value[1]));
-                } else {
+                String key = param.split("=")[0];
+                String value = param.split("=")[1];
+                if (key_value.length == 2) { // key value parfait
+                    Key_value kv = new Key_value(key, value);
+                    key_values.add(kv);
+                } else {                
                     throw new Errors("params doit etre de la forme key=value"); 
                 }
             }
         }
-        return parametres;
+        return key_values;
     }
 
     private String get_dernier_uri (String request_uri) {
@@ -183,7 +183,7 @@ public class Front_controller  extends HttpServlet {
 
     
 
-    private void traite_mapping (Mapping mapping, ArrayList <Param> params, HttpServletRequest request, HttpServletResponse response) {
+    private void traite_mapping (Mapping mapping, ArrayList <Key_value> params_Key_values, HttpServletRequest request, HttpServletResponse response) {
         
         String ctrl_className = this.package_name+"."+mapping.getClass_name();
         RequestDispatcher dispatcher = null;
@@ -192,22 +192,32 @@ public class Front_controller  extends HttpServlet {
             
             Object controller = ctrl_class.getDeclaredConstructor().newInstance();
             Object[] params_fonct = new Object[mapping.getParams().size()];
-            Class <?>[] type_params = new Class[mapping.getParams().size()]; 
+            Class <?>[] type_params = new Class[params_fonct.length]; 
 
             int i = 0;
-            for (Parameter parameter : mapping.getParams()) {
-                Request_param request_param = parameter.getAnnotation(Request_param.class);
-                // Param param = Param.get_param(request_param.value(), params);
-                String value = request.getParameter(request_param.value());
+            for (Parametre parametre : mapping.getParams()) {
                 Object param = null;
-                if (value != null) {
-                    param = parameter.getType().getConstructor(String.class).newInstance(value);
-                } else {
-                    param = null;
+                Class <?> type = parametre.getParameter().getType();
+                if (parametre.getParameter().isAnnotationPresent(Param.class)) {
+                    System.out.println("param");
+                    Param key = parametre.getParameter().getAnnotation(Param.class);
+                    String value = request.getParameter(key.value());
+                    if (value != null) {
+                        param = type.getConstructor(String.class).newInstance(value);
+                    } else param = null;
+                } else if (parametre.getParameter().isAnnotationPresent(Param_obj.class)) {
+                    Class <?> classe = parametre.getParameter().getType();
+                    param = process_traite_ParamObj(classe, request);
+                } else { // sinon (pas annoter)
+                    String key = parametre.getNom();
+                    Key_value keyvalue = Key_value.get_param(key, params_Key_values); 
+                    if (keyvalue != null) { // ao le izy
+                        String value = request.getParameter(key);
+                        param = type.getConstructor(String.class).newInstance(value);
+                    } else param = null;
                 }
-                
                 params_fonct[i] = param;
-                type_params[i] = parameter.getType();
+                type_params[i] = type; // classe
                 ++ i;
             }
             
@@ -242,8 +252,8 @@ public class Front_controller  extends HttpServlet {
                 dispatcher.forward(request, response);
             }
         } catch (Exception e) {
-            // LISTE EXCEPTION POSSIBLES;
             /**
+             // LISTE EXCEPTION POSSIBLES;
              // EXCEPTION : 
              * InstantiationException, 
              * IllegalAccessException, 
@@ -256,6 +266,39 @@ public class Front_controller  extends HttpServlet {
         }
     }
 
+
+    private Object process_traite_ParamObj (Class <?> classe, HttpServletRequest request) throws Exception {
+        Field[] attrs = classe.getDeclaredFields();
+        String value = null;
+        Object obj = classe.getConstructor().newInstance();
+
+        for (Field field : attrs) {
+            String setter_name = "set"+premier_lettreMaj(field.getName());
+            if (field.isAnnotationPresent(Attr.class)) {
+                String key = field.getAnnotation(Attr.class).value();
+                value = request.getParameter(key);
+            } else {
+                String key = field.getName();
+                value = request.getParameter(key);
+            }
+
+            Method method = classe.getDeclaredMethod(setter_name, String.class);
+            method.invoke(obj, value);
+            
+            // method = classe.getDeclaredMethod("get"+premier_lettreMaj(field.getName()));
+            // Object o = method.invoke(obj);
+            // System.out.println(method.getName()+" "+o);
+        }
+        return obj;
+    }
+
+    private String premier_lettreMaj (String string) {
+        if (string == null || string.isEmpty()) {
+            return string;
+        }
+        return string.substring(0, 1)
+        .toUpperCase() + string.substring(1);
+    }
 
     private void check_controller (String package_name) 
         throws URISyntaxException, Errors, IOException {
@@ -271,7 +314,7 @@ public class Front_controller  extends HttpServlet {
         try {
             if (resource == null) {
                 // package vide na tsy miexiste
-                throw new Errors();
+                throw new Errors("verifier le package controlleur dans (web.xml et srcs)");
             } else {
                 URI uri = resource.toURI(); // maka uri package
                 Path package_ = Paths.get(uri);
@@ -341,36 +384,57 @@ public class Front_controller  extends HttpServlet {
          * meme uri
          */
         String error = "";
-        Mapping nv_mapping = null;
-        Mapping mapping = null;
-        String classe_name = classe.getSimpleName(),
-        methode_name = method.getName();
+        String classe_name = classe.getSimpleName();
 
+        ArrayList <Parametre> params = new ArrayList <Parametre> ();
+        Paranamer paranamer = new AdaptiveParanamer();
         Parameter[] parameters = method.getParameters();
-        ArrayList <Parameter> params = new ArrayList <Parameter> ();
+        String[] params_name = paranamer.lookupParameterNames(method);
 
-        for (Parameter param : parameters) {
-            // recuperation params ___
-            if (param.isAnnotationPresent(Request_param.class)) {
-                params.add(param);
-            }
+        for (int i = 0; i < params_name.length; i++) {
+            String param_name = params_name[i];
+            Parameter parameter = parameters[i];
+            params.add(new Parametre(param_name, parameter));
         }
 
-        if (method.isAnnotationPresent(Get.class)) {
-            // METHODE GET ___
-            Get get = method.getAnnotation(Get.class);
-            mapping = this.do_gets.get(get.value());
-            nv_mapping = new Mapping(classe_name, methode_name, params);
-            if (mapping != null) {
-                /**
-                 * ef misy mitovy URI aminy ao */
-                error += "* "+ nv_mapping.getClass_name()+" misy mitovy url, methode: GET "+nv_mapping.getMethode_name()+" - url: "+get.value()+"\r\n";
-            } else {
-                this.do_gets.put(get.value(), nv_mapping);
-            }
-        }// else SKIP _______
+        try {
+            if (method.isAnnotationPresent(Get.class)) this.get_methodGET(classe_name, method, params);
+            else if (method.isAnnotationPresent(Post.class)) this.get_methodPOST(classe_name, method, params);
+            // else SKIP _______ 
+        } catch (Errors e) {
+            // ERRORS mitovy uri le methode
+            error += e.getMessage();
+        }
         return error; 
     }
+
+    private void get_methodGET (String classe_name, Method method, ArrayList <Parametre> params) throws Errors {
+        Get get = method.getAnnotation(Get.class);
+        
+        Mapping mapping = this.do_gets.get(get.value()); // get mapping dans la liste do get
+        if (mapping != null) {
+            /** * ef misy mitovy URI aminy ao */
+            throw new Errors ("* "+ mapping.getClass_name()+" misy mitovy url, methode: GET "+mapping.getMethode_name()+" - url: "+get.value()+"\r\n");
+        } else {
+            mapping = new Mapping(classe_name, method.getName(), params);
+            this.do_gets.put(get.value(), mapping);
+        }
+    }
+
+    private Mapping get_methodPOST (String classe_name, Method method, ArrayList <Parametre> params) throws Errors {
+        Post post = method.getAnnotation(Post.class);
+
+        Mapping mapping = this.do_posts.get(post.value());
+        if (mapping != null) {
+            /** * ef misy mitovy URI aminy ao */
+            throw new Errors("* "+ mapping.getClass_name()+" misy mitovy url, methode: POST "+mapping.getMethode_name()+" - url: "+post.value()+"\r\n");
+        } else {
+            mapping = new Mapping(classe_name, method.getName(), params);
+            this.do_posts.put(post.value(), mapping);
+        }
+        return null;
+    }
+
 
     /*** doGet */
     @Override
@@ -379,6 +443,7 @@ public class Front_controller  extends HttpServlet {
         
         this.setGet(true);
         this.setPost(false);
+        System.out.println("post "+post+" get "+get);
         processRequest(request, response);
     }
 
@@ -389,6 +454,7 @@ public class Front_controller  extends HttpServlet {
 
         this.setGet(false);
         this.setPost(true);
+        System.out.println("post "+post+" get "+get);
         processRequest(request, response);
     }
 
