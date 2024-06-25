@@ -1,6 +1,5 @@
 package mg.itu.beans;
 
-import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 
 public class Mapping {
