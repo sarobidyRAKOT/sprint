@@ -133,11 +133,16 @@ public class Front_controller extends HttpServlet {
                     request.setAttribute("error", new Error(err));
                     dispatcher.forward(request, response);
                 }
-            } catch (Errors e) {
-                // e.printStackTrace();
+            // } catch (Errors e) {
+            //     // e.printStackTrace();
+            //     dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
+            //     request.setAttribute("error", new Error(e.getMessage()));
+            //     dispatcher.forward(request, response);
+            } catch (Exception e) {
                 dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
                 request.setAttribute("error", new Error(e.getMessage()));
                 dispatcher.forward(request, response);
+                // e.printStackTrace();
             }
 
         }
@@ -183,23 +188,22 @@ public class Front_controller extends HttpServlet {
 
     
 
-    private void traite_mapping (Mapping mapping, ArrayList <Key_value> params_Key_values, HttpServletRequest request, HttpServletResponse response) {
+    private void traite_mapping (Mapping mapping, ArrayList <Key_value> params_Key_values, HttpServletRequest request, HttpServletResponse response) throws Exception {
         
         String ctrl_className = this.package_name+"."+mapping.getClass_name();
-        RequestDispatcher dispatcher = null;
         try {
             Class <?> ctrl_class = Class.forName(ctrl_className);
             
             Object controller = ctrl_class.getDeclaredConstructor().newInstance();
             Object[] params_fonct = new Object[mapping.getParams().size()];
             Class <?>[] type_params = new Class[params_fonct.length]; 
-
+            boolean pas_annoter = false;
             int i = 0;
             for (Parametre parametre : mapping.getParams()) {
+                /** TRAITEMENT PARAMETRES de la fonction */
                 Object param = null;
                 Class <?> type = parametre.getParameter().getType();
                 if (parametre.getParameter().isAnnotationPresent(Param.class)) {
-                    System.out.println("param");
                     Param key = parametre.getParameter().getAnnotation(Param.class);
                     String value = request.getParameter(key.value());
                     if (value != null) {
@@ -209,48 +213,22 @@ public class Front_controller extends HttpServlet {
                     Class <?> classe = parametre.getParameter().getType();
                     param = process_traite_ParamObj(classe, request);
                 } else { // sinon (pas annoter)
-                    String key = parametre.getNom();
-                    Key_value keyvalue = Key_value.get_param(key, params_Key_values); 
-                    if (keyvalue != null) { // ao le izy
-                        String value = request.getParameter(key);
-                        param = type.getConstructor(String.class).newInstance(value);
-                    } else param = null;
+                    pas_annoter = true;
+                    break;
                 }
                 params_fonct[i] = param;
                 type_params[i] = type; // classe
                 ++ i;
             }
-            
-            Object obj_retour = reflexion.execute_METHODE(controller, mapping.getMethode_name(), type_params, params_fonct);
-            if (obj_retour  instanceof ModelView) {
-                // traitement model view
-                ModelView model_view = (ModelView) obj_retour;
-    
-                dispatcher = request.getRequestDispatcher(model_view.getUrl());
-                model_view.getData().forEach((cle, valeur) -> {
-                    request.setAttribute(cle, valeur);
-                });
-                dispatcher.forward(request, response);
-            } else if (obj_retour instanceof String) {
-                PrintWriter out = response.getWriter();
-                out.println("<!DOCTYPE html>\r\n"+
-                "<html lang=\"en\">\r\n"+
-                "    <head>\r\n"+
-                "        <meta charset=\"UTF-8\">\r\n"+
-                "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"+
-                "        <title></title>\r\n"+ // titre modifiable
-                "    </head>\r\n"+
-                "    <body>\r\n"+
-                "        <h2>"+this.get_classeName()+"</h2>\r\n"+
-                "        <p>"+obj_retour.toString()+"</p>\r\n"+
-                "    </body>\r\n"+
-                "</html>");
-                out.close();
+
+            if (pas_annoter) {
+                /** si un parametre n'est pas annoter */
+                throw new Exception("ETU 002491 param tsy annoter !!");
             } else {
-                dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
-                request.setAttribute("error", new Error("Non reconnu"));
-                dispatcher.forward(request, response);
+                Object obj_retour = reflexion.execute_METHODE(controller, mapping.getMethode_name(), type_params, params_fonct);
+                trat_objRTN_funCTRL(obj_retour, request, response);
             }
+            
         } catch (Exception e) {
             /**
              // LISTE EXCEPTION POSSIBLES;
@@ -262,7 +240,49 @@ public class Front_controller extends HttpServlet {
              * NoSuchMethodException, 
              * SecurityException
              */
-            e.printStackTrace();
+            throw e;
+        }
+    }
+
+
+    private void trat_objRTN_funCTRL (Object obj_retour, HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
+        /**
+         * traiter l'objet retouner par la
+         * fonction du controlleur specifier dans 
+         * l'objet Mapping 
+         */
+    
+        RequestDispatcher dispatcher = null;
+
+        if (obj_retour  instanceof ModelView) {
+            // traitement model view
+            ModelView model_view = (ModelView) obj_retour;
+
+            dispatcher = request.getRequestDispatcher(model_view.getUrl());
+            model_view.getData().forEach((cle, valeur) -> {
+                request.setAttribute(cle, valeur);
+            });
+            dispatcher.forward(request, response);
+        } else if (obj_retour instanceof String) {
+            PrintWriter out = response.getWriter();
+            out.println("<!DOCTYPE html>\r\n"+
+            "<html lang=\"en\">\r\n"+
+            "    <head>\r\n"+
+            "        <meta charset=\"UTF-8\">\r\n"+
+            "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"+
+            "        <title></title>\r\n"+ // titre modifiable
+            "    </head>\r\n"+
+            "    <body>\r\n"+
+            "        <h2>"+this.get_classeName()+"</h2>\r\n"+
+            "        <p>"+obj_retour.toString()+"</p>\r\n"+
+            "    </body>\r\n"+
+            "</html>");
+            out.close();
+        } else {
+            dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
+            request.setAttribute("error", new Error("Non reconnu"));
+            dispatcher.forward(request, response);
         }
     }
 
