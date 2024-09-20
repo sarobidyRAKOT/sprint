@@ -32,14 +32,26 @@ inclure tous les library :
    * on separe les parametres par '&' et on met '?' avant d'ajouter les parametres
    * on utilise une library Paranamer
    * tsy afak manao type de parametre sarotr be fa int, double, String, Byte,... (type date tsy mety)
-- Strint 7:
-   
-
+- Sprint 7:
    * Objet atao parametre:
       - Fields: Annoter attr na mitovy am an am formulaire fotsin
       - Method setter tsy maints String parametre, de ny nom method: set+attribut_name(attribut_name-> majuscul ny voloany)
       - Tsy maintsy manan constructeur par defaut
 
+- Sprint 8:
+   * Gestion et utilisation du session
+   > Framework:
+      1
+      - Créer une classe MySession ayant comme seul attribut  HttpSession
+      - ajouter une fonction get(String key), add(String key, Object obj), delete(String key)
+      2
+      - A l'appel des methodes des controllers de l'utilisateur, pendant la génération des arguments, verifier 
+      si le paramètre est de type MySession et dans ce cas, créer un MySession avec req.getSession()
+   > Test:
+      - Creer un formulaire de login (identifiant, mot de passe)
+      - Quand la personne se connecte, elle accède à une liste de donnée propres à son identifiant
+      - Ajouter un bouton déconnexion qui supprime les données de la session
+   > Vous pouvez utiliser n'importe quel type pour les listes de données mais sans utiliser de système  de base de donnée
 
 ## REGLE POUR LE DEVELOPPEUR...
 >

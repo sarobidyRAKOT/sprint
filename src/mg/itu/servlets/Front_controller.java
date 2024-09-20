@@ -19,7 +19,7 @@ import mg.itu.Err.Errors;
 import mg.itu.annotation.*;
 import mg.itu.beans.*;
 import mg.itu.reflect.Reflexion;
-
+    
 public class Front_controller extends HttpServlet {
 
     protected String package_name;
@@ -118,14 +118,14 @@ public class Front_controller extends HttpServlet {
             // traitement_uri(mapp);
             try {
                 String key = "/"+this.get_dernier_uri(request.getRequestURI()); // uri
-                ArrayList <Key_value> params_Key_values = traitement_params(request.getQueryString()); // params
+                // ArrayList <Key_value> params_Key_values = traitement_params(request.getQueryString()); // params
                 // for (Key_value key_value : params_Key_values) {
                 //     System.out.println(key_value.toString());
                 // }
                 Mapping mapping = get_mapping(key);
                 if (mapping != null) {
                     // misy le mapping
-                    traite_mapping(mapping, params_Key_values, request, response);
+                    traite_mapping(mapping, request, response);
                 } else {
                     dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
                     String err = "l'URL "+request.getRequestURL()+" est introuvable\r\n"+
@@ -133,11 +133,6 @@ public class Front_controller extends HttpServlet {
                     request.setAttribute("error", new Error(err));
                     dispatcher.forward(request, response);
                 }
-            // } catch (Errors e) {
-            //     // e.printStackTrace();
-            //     dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
-            //     request.setAttribute("error", new Error(e.getMessage()));
-            //     dispatcher.forward(request, response);
             } catch (Exception e) {
                 dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
                 request.setAttribute("error", new Error(e.getMessage()));
@@ -150,31 +145,31 @@ public class Front_controller extends HttpServlet {
     }
 
     
-    private ArrayList <Key_value> traitement_params (String string_params) throws Errors {
-        /**
-         * mamerina null null le string_params
-         * sinon ArrayList Param (key, value)
-         */
+    // private ArrayList <Key_value> traitement_params (String string_params) throws Errors {
+    //     /**
+    //      * mamerina null null le string_params
+    //      * sinon ArrayList Param (key, value)
+    //      */
 
-        ArrayList <Key_value> key_values = null;
-        if (string_params != null && string_params.length() > 0) {
-            String[] params = string_params.split("&");
+    //     ArrayList <Key_value> key_values = null;
+    //     if (string_params != null && string_params.length() > 0) {
+    //         String[] params = string_params.split("&");
             
-            key_values = new ArrayList <Key_value> (params.length);
-            for (String param : params) {
-                String[] key_value = param.split("=");
-                String key = param.split("=")[0];
-                String value = param.split("=")[1];
-                if (key_value.length == 2) { // key value parfait
-                    Key_value kv = new Key_value(key, value);
-                    key_values.add(kv);
-                } else {                
-                    throw new Errors("params doit etre de la forme key=value"); 
-                }
-            }
-        }
-        return key_values;
-    }
+    //         key_values = new ArrayList <Key_value> (params.length);
+    //         for (String param : params) {
+    //             String[] key_value = param.split("=");
+    //             String key = param.split("=")[0];
+    //             String value = param.split("=")[1];
+    //             if (key_value.length == 2) { // key value parfait
+    //                 Key_value kv = new Key_value(key, value);
+    //                 key_values.add(kv);
+    //             } else {                
+    //                 throw new Errors("params doit etre de la forme key=value"); 
+    //             }
+    //         }
+    //     }
+    //     return key_values;
+    // }
 
     private String get_dernier_uri (String request_uri) {
         int indexlast_slash = request_uri.lastIndexOf('/');
@@ -188,7 +183,7 @@ public class Front_controller extends HttpServlet {
 
     
 
-    private void traite_mapping (Mapping mapping, ArrayList <Key_value> params_Key_values, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    private void traite_mapping (Mapping mapping, HttpServletRequest request, HttpServletResponse response) throws Exception {
         
         String ctrl_className = this.package_name+"."+mapping.getClass_name();
         try {
@@ -212,7 +207,10 @@ public class Front_controller extends HttpServlet {
                 } else if (parametre.getParameter().isAnnotationPresent(Param_obj.class)) {
                     Class <?> classe = parametre.getParameter().getType();
                     param = process_traite_ParamObj(classe, request);
-                } else { // sinon (pas annoter)
+                } else if (type.isAssignableFrom(MySession.class)) {
+                    
+                    param = new MySession(request);
+                } else { // sinon (pas annoter no sady tsy MySession)
                     pas_annoter = true;
                     break;
                 }
@@ -305,9 +303,6 @@ public class Front_controller extends HttpServlet {
             Method method = classe.getDeclaredMethod(setter_name, String.class);
             method.invoke(obj, value);
             
-            // method = classe.getDeclaredMethod("get"+premier_lettreMaj(field.getName()));
-            // Object o = method.invoke(obj);
-            // System.out.println(method.getName()+" "+o);
         }
         return obj;
     }
@@ -463,7 +458,6 @@ public class Front_controller extends HttpServlet {
         
         this.setGet(true);
         this.setPost(false);
-        System.out.println("post "+post+" get "+get);
         processRequest(request, response);
     }
 
@@ -474,7 +468,6 @@ public class Front_controller extends HttpServlet {
 
         this.setGet(false);
         this.setPost(true);
-        System.out.println("post "+post+" get "+get);
         processRequest(request, response);
     }
 
