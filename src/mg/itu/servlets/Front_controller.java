@@ -8,6 +8,7 @@ import java.lang.reflect.Parameter;
 import java.nio.file.*;
 import java.util.*;
 
+import com.google.gson.Gson;
 import com.thoughtworks.paranamer.AdaptiveParanamer;
 import com.thoughtworks.paranamer.Paranamer;
 
@@ -96,7 +97,7 @@ public class Front_controller extends HttpServlet {
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
+        response.setContentType("application/json;charset=UTF-8");
         /**
          * VITA MINTSY NY INIT VO MANDALO ATU AM TY FUNCTION TY ___
          */
@@ -125,7 +126,23 @@ public class Front_controller extends HttpServlet {
                 Mapping mapping = get_mapping(key);
                 if (mapping != null) {
                     // misy le mapping
-                    traite_mapping(mapping, request, response);
+                    /** TRAITE_MAPPING miretourne an le objet retourner par la fonction (FCT) */
+                    Object object_returnFCT = traite_mapping(mapping, request, response);
+                    // ETAPE 1 :
+                    if (mapping.getRestAPI()) {
+                        Gson gson = new Gson();
+                        PrintWriter out = response.getWriter();
+                        if (object_returnFCT instanceof ModelView) {
+                            ModelView model_view = (ModelView) object_returnFCT;
+                            out.print(gson.toJson(model_view.getData()));
+                        } else {
+                            out.print(gson.toJson(object_returnFCT));
+                        }
+                        out.close();
+                    }
+                    // ETAPE 2 :
+                    objet_returnSIMPLE(object_returnFCT, request, response);
+                    
                 } else {
                     dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
                     String err = "l'URL "+request.getRequestURL()+" est introuvable\r\n"+
@@ -142,6 +159,49 @@ public class Front_controller extends HttpServlet {
 
         }
 
+    }
+
+    private void objet_returnSIMPLE (Object obj_retour, HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
+        /**
+         * traiter l'objet retouner par la
+         * fonction du controlleur specifier dans 
+         * l'objet Mapping 
+         */
+
+        
+        RequestDispatcher dispatcher = null;
+
+        if (obj_retour  instanceof ModelView) {
+            // traitement model view
+            ModelView model_view = (ModelView) obj_retour;
+
+            dispatcher = request.getRequestDispatcher(model_view.getUrl());
+            model_view.getData().forEach((cle, valeur) -> {
+                request.setAttribute(cle, valeur);
+            });
+
+            dispatcher.forward(request, response);
+        } else if (obj_retour instanceof String) {
+            PrintWriter out = response.getWriter();
+            out.println("<!DOCTYPE html>\r\n"+
+            "<html lang=\"en\">\r\n"+
+            "    <head>\r\n"+
+            "        <meta charset=\"UTF-8\">\r\n"+
+            "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"+
+            "        <title></title>\r\n"+ // titre modifiable
+            "    </head>\r\n"+
+            "    <body>\r\n"+
+            "        <h2>"+this.get_classeName()+"</h2>\r\n"+
+            "        <p>"+obj_retour.toString()+"</p>\r\n"+
+            "    </body>\r\n"+
+            "</html>");
+            out.close();
+        } else {
+            dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
+            request.setAttribute("error", new Error("Non reconnu"));
+            dispatcher.forward(request, response);
+        }
     }
 
     
@@ -183,7 +243,7 @@ public class Front_controller extends HttpServlet {
 
     
 
-    private void traite_mapping (Mapping mapping, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    private Object traite_mapping (Mapping mapping, HttpServletRequest request, HttpServletResponse response) throws Exception {
         
         String ctrl_className = this.package_name+"."+mapping.getClass_name();
         try {
@@ -222,9 +282,10 @@ public class Front_controller extends HttpServlet {
             if (pas_annoter) {
                 /** si un parametre n'est pas annoter */
                 throw new Exception("ETU 002491 param tsy annoter !!");
-            } else {
+            } 
+            else {
                 Object obj_retour = reflexion.execute_METHODE(controller, mapping.getMethode_name(), type_params, params_fonct);
-                trat_objRTN_funCTRL(obj_retour, request, response);
+                return obj_retour;
             }
             
         } catch (Exception e) {
@@ -242,47 +303,6 @@ public class Front_controller extends HttpServlet {
         }
     }
 
-
-    private void trat_objRTN_funCTRL (Object obj_retour, HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
-        /**
-         * traiter l'objet retouner par la
-         * fonction du controlleur specifier dans 
-         * l'objet Mapping 
-         */
-    
-        RequestDispatcher dispatcher = null;
-
-        if (obj_retour  instanceof ModelView) {
-            // traitement model view
-            ModelView model_view = (ModelView) obj_retour;
-
-            dispatcher = request.getRequestDispatcher(model_view.getUrl());
-            model_view.getData().forEach((cle, valeur) -> {
-                request.setAttribute(cle, valeur);
-            });
-            dispatcher.forward(request, response);
-        } else if (obj_retour instanceof String) {
-            PrintWriter out = response.getWriter();
-            out.println("<!DOCTYPE html>\r\n"+
-            "<html lang=\"en\">\r\n"+
-            "    <head>\r\n"+
-            "        <meta charset=\"UTF-8\">\r\n"+
-            "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"+
-            "        <title></title>\r\n"+ // titre modifiable
-            "    </head>\r\n"+
-            "    <body>\r\n"+
-            "        <h2>"+this.get_classeName()+"</h2>\r\n"+
-            "        <p>"+obj_retour.toString()+"</p>\r\n"+
-            "    </body>\r\n"+
-            "</html>");
-            out.close();
-        } else {
-            dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
-            request.setAttribute("error", new Error("Non reconnu"));
-            dispatcher.forward(request, response);
-        }
-    }
 
 
     private Object process_traite_ParamObj (Class <?> classe, HttpServletRequest request) throws Exception {
@@ -378,7 +398,10 @@ public class Front_controller extends HttpServlet {
          * mitovy uri
          * on stock les erreurs
          */
-        if (classe.isAnnotationPresent(Annotation_controller.class) && !Modifier.isAbstract(classe.getModifiers())) {
+
+        //  sady annoter controlleur
+        if (classe.isAnnotationPresent(Annotation_controller.class)
+        && !Modifier.isAbstract(classe.getModifiers())) {
             Method[] methods = classe.getDeclaredMethods();
             String error = "";// pour stocker les erreurs
 
@@ -432,7 +455,9 @@ public class Front_controller extends HttpServlet {
             throw new Errors ("* "+ mapping.getClass_name()+" misy mitovy url, methode: GET "+mapping.getMethode_name()+" - url: "+get.value()+"\r\n");
         } else {
             mapping = new Mapping(classe_name, method.getName(), params);
-            this.do_gets.put(get.value(), mapping);
+            if (method.isAnnotationPresent(RestAPI.class)) mapping.setRestAPI(true);
+
+            this.do_gets.put(get.value(), mapping); // ALEFA AO ANATY LIST METHODE DOGET
         }
     }
 

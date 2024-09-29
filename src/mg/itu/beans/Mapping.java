@@ -7,6 +7,7 @@ public class Mapping {
     protected String class_name;
     protected String methode_name;
     protected ArrayList <Parametre> params;
+    boolean restAPI = false;
 
     public Mapping (String classs, String method, ArrayList <Parametre> parametres) {
         this.class_name = classs;
@@ -25,6 +26,8 @@ public class Mapping {
     public String getMethode_name() {
         return methode_name;
     }
+    public boolean getRestAPI () { return this.restAPI; }
+    public void setRestAPI(boolean restAPI) { this.restAPI = restAPI;}
     public ArrayList <Parametre> getParams() { return params; }
 
 

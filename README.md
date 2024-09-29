@@ -53,5 +53,16 @@ inclure tous les library :
       - Ajouter un bouton déconnexion qui supprime les données de la session
    > Vous pouvez utiliser n'importe quel type pour les listes de données mais sans utiliser de système  de base de donnée
 
+- Sprint 9 :
+   OBJECTIF : Exposer les actions du controlleur en REST API
+   FRAMEWORK :
+      - Creer une classe annotation (EX : RestAPI)
+      - Dans la partie Front_controller, on doit verifier l'existance de cette annotation
+         > Si l'annotation n'existe pas --> continuez comme avant
+         > Si oui
+            Recuperer la valeur de retour de la methode
+               (transformation en JSON on peux utiliser le library Gson)
+               si autre que ModelView, transformer en json directement
+               si ModelView, transformer en json la valeur de l'attribut "data"
 ## REGLE POUR LE DEVELOPPEUR...
 >
