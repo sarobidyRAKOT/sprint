@@ -1,36 +1,45 @@
 package mg.itu.beans;
 
-import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Mapping {
     
-    protected String class_name;
-    protected String methode_name;
-    protected ArrayList <Parametre> params;
-    boolean restAPI = false;
+    protected String classe;
+    protected Set <VerbAction> verbActions;
 
-    public Mapping (String classs, String method, ArrayList <Parametre> parametres) {
-        this.class_name = classs;
-        this.methode_name = method;
-        this.params = parametres;
+    public Mapping (String classe) {
+        this.classe = classe;
+        /**
+         * TAILLE verbAction ...
+         * 2 (post)
+         */
+        this.verbActions = new HashSet <VerbAction>(2);
     }
 
-    @Override
-    public String toString() {
-        return "class:["+this.class_name+"] methode:["+this.methode_name+"]";
-    }
-
-    public String getClass_name() {
-        return class_name;
-    }
-    public String getMethode_name() {
-        return methode_name;
-    }
-    public boolean getRestAPI () { return this.restAPI; }
-    public void setRestAPI(boolean restAPI) { this.restAPI = restAPI;}
-    public ArrayList <Parametre> getParams() { return params; }
 
 
+    public void addVerbAction (VerbAction VA) {
+        if (VA == null) {
+
+        } else {
+
+        }
+
+    }
+
+    public boolean check_verbActionBY (String uri, String verb) {
+
+        boolean verbAction_efaAo = false; // tsy mbola ao ...
+        for (VerbAction verbAction : verbActions) {
+            verbAction_efaAo = verbAction.isVerb_UriExist(uri, verb);
+            if (verbAction_efaAo) {
+                break;
+            }
+        }
+        return verbAction_efaAo;
+    }
+    
 
 
 }
