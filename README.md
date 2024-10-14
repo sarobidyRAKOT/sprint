@@ -64,5 +64,7 @@ inclure tous les library :
                (transformation en JSON on peux utiliser le library Gson)
                si autre que ModelView, transformer en json directement
                si ModelView, transformer en json la valeur de l'attribut "data"
-## REGLE POUR LE DEVELOPPEUR...
->
+- SPRINT 10 : 
+   OBJECTIF : implementation du methode POST et GET
+- SPRINT 11 :
+   OBJECTIF : GESTION D'EXCEPTION au ùoùent du check controller

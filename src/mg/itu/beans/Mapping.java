@@ -15,32 +15,26 @@ public class Mapping {
          * 2 (post)
          */
         this.verbActions = new HashSet <VerbAction>(2);
-    }
+    }    
 
-
-
-    public void addVerbAction (VerbAction VA) {
-        if (VA == null) {
-
-        } else {
-
-        }
-
-    }
-
-    public boolean check_verbActionBY (String uri, String verb) {
-
-        boolean verbAction_efaAo = false; // tsy mbola ao ...
-        for (VerbAction verbAction : verbActions) {
-            verbAction_efaAo = verbAction.isVerb_UriExist(uri, verb);
-            if (verbAction_efaAo) {
+    public VerbAction getVerbAction_by (Verb verb) {
+        VerbAction verbAction = null;
+        for (VerbAction va : verbActions) {
+            if (va.isVerb(verb)) {
+                verbAction = va;
                 break;
             }
         }
-        return verbAction_efaAo;
-    }
-    
 
+        return verbAction;
+    }
+
+    public Set<VerbAction> getVerbActions() {
+        return verbActions;
+    }
+    public String getClasse() {
+        return classe;
+    }
 
 }
 
