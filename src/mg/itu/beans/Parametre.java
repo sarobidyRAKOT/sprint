@@ -1,7 +1,6 @@
 package mg.itu.beans;
 
 import java.lang.reflect.Parameter;
-import java.util.HashMap;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
