@@ -1,7 +1,7 @@
 package mg.itu.servlets;
 
 import java.io.*;
-import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
@@ -16,6 +16,8 @@ import java.net.*;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import mg.itu.Err.Error404;
+import mg.itu.Err.Error500;
 import mg.itu.Err.Errors;
 import mg.itu.annotation.*;
 import mg.itu.beans.*;
@@ -26,46 +28,26 @@ public class Front_controller extends HttpServlet {
     protected String package_name;
     protected HashMap <String, Mapping> url_Mapping;
     protected Reflexion reflexion;
-    private boolean init_error = false;
-    protected Error error;
+    private static Exception error500 = null;
+    private Verb verb;
 
-    private boolean post = false;
-    private boolean get = false;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
-        //  Auto-generated method stub
-        /**
-         * maka an le param-value (web.xml) -> package
-         */
         super.init(config);
-
         this.package_name = config.getInitParameter("package_controllers");
         
         try {
-            this.package_name.isEmpty();
+            this.package_name.isEmpty(); 
             reflexion = new Reflexion();
-
             url_Mapping = new HashMap<String, Mapping> ();
 
             this.check_controller(package_name);
-        } catch (URISyntaxException | IOException e) {
-            // TOKONY TSY TAFIDITRA ATO ___
-            System.err.println("\n");
-            e.printStackTrace();
         } catch (NullPointerException e) {
-            /**
-             * PROBLEME TSY AZO LE PACKAGE AN AM INIT (web.xml)
-             *  - param-name : package_controllers (tsy maintsy io)
-             */
-            this.init_error = true;
-            String err = "param-name diso ao amin'ny web.xml, [correct param-name]: <param-name>package_controllers</param-name>";
-            this.error = new Error(err);
-            System.err.println("\n[ERROR-USER]: "+err);
-        } catch (Errors e) {
-            /** paquet controlleur vide (pas de classe annoter [Controller]) */
-            this.init_error = true;
-            System.err.println("\n[ERROR-USER]: "+e);
+            e.printStackTrace();
+        } catch (Error500 e) {
+            error500 = e;
+            e.printStackTrace();
         }
     }
 
@@ -75,61 +57,288 @@ public class Front_controller extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
-        this.setGet(true);
-        this.setPost(false);
+        verb = Verb.GET;
         processRequest(request, response);
-    }
+    }   
 
     /** * doPost */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
-        this.setGet(false);
-        this.setPost(true);
+        verb = Verb.POST;
         processRequest(request, response);
     }
 
 
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
-        response.setContentType("application/json;charset=UTF-8");
-        /**
-         * VITA MINTSY NY INIT VO MANDALO ATU AM TY FUNCTION TY ___
-         * raha misy erreur dia dispache-na makany amin'ny erreur framework
-         */
-        RequestDispatcher dispatcher =request.getRequestDispatcher("errors/error_framework.jsp");
-        
-        if (init_error) {
-            request.setAttribute("error", this.error);
-            dispatcher.forward(request, response);
-        } else {
-            // RAHA TSY MISY EXCEPTION NY CHECK CONTROLLER 
-            try {
-                String key = "/"+this.get_dernier_uri(request.getRequestURI()); // uri
+    
 
-                Mapping mapping = this.hashMap_Mapping.get(key);
-                this.trait_mapping (mapping, key, dispatcher, request, response);
-            } catch (Exception e) {
-                request.setAttribute("error", new Error(e.getMessage()));
-                dispatcher.forward(request, response);
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+        response.setContentType("application/json;charset=UTF-8");
+        if (error500 instanceof Error500) {
+            response.setContentType("text/html;charset=UTF-8");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write(Front_controller.HTML500(Front_controller.error500.getMessage()));
+        } else {
+            String url = "/"+this.get_dernier_uri(request.getRequestURI());
+            Mapping mapping = this.url_Mapping.get(url);
+            try {
+                exceution_mapp (mapping, url, response, request);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (Errors e) {
+                e.printStackTrace();
+            } catch (Error404 e) {
+                response.setContentType("text/html;charset=UTF-8");
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                response.getWriter().write(Front_controller.HTML404 (e.getMessage()));
+                e.printStackTrace();
+            } catch (ServletException e) {
+                e.printStackTrace();
+            } catch (Error500 e) {
+                response.setContentType("text/html;charset=UTF-8");
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write(Front_controller.HTML500(e.getMessage()));
+                e.printStackTrace();
             }
 
         }
-
     }
 
 
+    private String get_dernier_uri (String request_uri) {
+        int indexlast_slash = request_uri.lastIndexOf('/');
+        if (indexlast_slash == -1) {
+            // SI AUCUN N'EST TROUVER ______
+            return request_uri;
+        } else {
+            return request_uri.substring(indexlast_slash+1);
+        } 
+    }
+
+
+
+
+    private void check_controller (String package_name)  throws Error500 {
+
+        // ____ charger package ____
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        String package_path = package_name.replace('.', '/');
+        URL resource = classLoader.getResource(package_path);
+        try {
+            if (resource == null) {
+                // il n'y a rien dans le package na tsy miexiste ...
+                throw new Error500("(web.xml - [param-value]) PACKAGE CONTROLLER N'EXISTE PAS OU LE PACKAGE EST VIDE");
+            } else {
+                URI uri = resource.toURI(); // maka uri-package
+                Path package_ = Paths.get(uri);
+                Errors error = new Errors();
+                // ____ parcourir tous les fichiers dans le paquet ____
+                Files.walk(package_).filter(fichier -> fichier.toString().endsWith(".class"))
+                .forEach(fichier -> {
+                    try { this.validControlleur(fichier); } 
+                    catch (Error500 e) {
+                        // manapaka an'le boucle raha misy exception fa tsy afaka throw exception
+                        error.setMessage(e.getMessage());
+                    }
+                });
+                if (!error.getMessage().isEmpty()) {
+                    throw new Error500(error.getMessage());
+                }
+            }
+
+        } catch (URISyntaxException | IOException e) {
+            e.printStackTrace();
+        }
+    }   
+
+
+    private void validControlleur (Path fichier) throws Error500 {
+        try {
+            String path_class = package_name+"."+fichier.getFileName().toString().replace(".class", "");
+            Class <?> classe = Class.forName(path_class);
+                    
+            /** TRAITEMENT D'UN CONTROLLEUR et SES FONCTION
+            //  sady annoter controlleur
+             */
+            if (classe.isAnnotationPresent(Controller.class)
+            && !Modifier.isAbstract(classe.getModifiers())) {
+                Method[] methods = classe.getDeclaredMethods();
+
+                for (Method method : methods) {
+                    VerbAction VA = this.conf_verbAction (method, classe);
+                    this.check_verbAction (VA, classe.getName());
+                }
+            }
+            // else skip _______
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    
+
+    private VerbAction conf_verbAction (Method method, Class <?> classe ) {
+        
+        // GET PARAMETRES DU FONCTION ...
+        Paranamer paranamer = new AdaptiveParanamer();
+        Parameter[] parameters = method.getParameters();
+        Parametre params[] = new Parametre[parameters.length];
+
+        for (int i = 0; i < parameters.length; i++) {
+            params[i] = new Parametre(paranamer.lookupParameterNames(method)[i], parameters[i]);
+        }
+
+        // voir si la methode est GET ou POST par defaut GET(tsy annoter le methode)
+        VerbAction VA = null;
+        boolean restAPI = false;
+        if (method.isAnnotationPresent(RestAPI.class)) {
+            restAPI = true;
+        }
+
+
+        if (method.isAnnotationPresent(Get.class)) VA = new VerbAction(method.getName(), Verb.GET, method.getAnnotation(Get.class).url(), restAPI);
+        else if (method.isAnnotationPresent(Post.class)) VA = new VerbAction(method.getName(), Verb.POST, method.getAnnotation(Post.class).url(), restAPI);
+        else VA = new VerbAction(method.getName(), Verb.GET, method.getAnnotation(Get.class).url(), restAPI);
+        
+        VA.setParametres(params); // ajouter les parametres dans le verbAction VA
+        return VA;
+    }
+
+
+    private void check_verbAction (VerbAction verbAction, String class_name) throws Error500 {
+        Mapping mapp = url_Mapping.get(verbAction.getUri());
+
+        if (mapp != null) {
+            if (!mapp.getClasse().equals(class_name)) throw new Error500 ("DES METHODS ASSICIER A UN MEME URL["+verbAction.getUri()+"] DE VERB DIFFERENT DOIT ETRE CONTENU DANS UN SEUL ET MEME CLASS");
+            if (!mapp.getVerbActions().add(verbAction)) throw new Error500 ("LA METHOD ["+verbAction.getMethode()+"] DANS LA CLASS ["+class_name+"] ASSOCIE PAR  L'URL ["+verbAction.getUri()+"] DOIT ETRE DE VERB DIFFERENT QUE L'AUTRE");
+            // else SKIP __
+        } else {
+            mapp = new Mapping(class_name);
+            mapp.getVerbActions().add(verbAction);
+            url_Mapping.put(verbAction.getUri(), mapp);
+        }
+    }
+
+    
+    private static String HTML500 (String message) {
+        String html500 = 
+        "<!DOCTYPE html>\r\n" +
+        "<html lang=\"en\">\r\n" +
+        "<head>\r\n" +
+        "    <meta charset=\"UTF-8\">\r\n" +
+        "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n" +
+        "    <title>500 Error - Internal Server Error</title>\r\n" +
+        "    <style>\r\n" +
+        Front_controller.style +
+        "    </style>\r\n" +
+        "</head>\r\n" +
+        "<body>\r\n" +
+        "\r\n" +
+        "    <h1>500</h1>\r\n" +
+        "    <h2>Oops! Something went wrong</h2>\r\n" +
+        "    <p>The server encountered an internal error and was unable to complete your request. Please try again.</p>\r\n" +
+        "    <p><b>"+message+".</b></p>\r\n" +
+        "</body>\r\n" +
+        "</html>"; 
+        return html500;
+    }
+
+    private static String HTML404 (String message) {
+        String html404 = "<!DOCTYPE html>\r\n" +
+        "<html lang=\"en\">\r\n" +
+        "<head>\r\n" +
+        "    <meta charset=\"UTF-8\">\r\n" +
+        "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n" +
+        "    <title>404 Error - Page Not Found</title>\r\n" +
+        "    <style>"+
+        Front_controller.style +
+        "    </style>\r\n" +
+        "</head>\r\n" +
+        "<body>\r\n" +
+        "\r\n" +
+        "    <h1>404</h1>\r\n" +
+        "    <h2>Oops! Nothing was found</h2>\r\n" +
+        "    <p>The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.</p>\r\n" +
+        "    <p><b>"+message+"</b></p>\r\n" +
+        "    <p><a href=\"/\">Return to homepage</a></p>\r\n" +
+        "</body>\r\n" +
+        "</html>";
+    
+        return html404;
+    }
+
+
+
+    private void exceution_mapp (Mapping mapping, String uri, HttpServletResponse response, HttpServletRequest request) throws IOException, Errors, Error404, ServletException, Error500 {
+        if (mapping != null) {
+            
+            /** TRAITE_MAPPING miretourne an le objet retourner par la fonction (FCT) */
+            String className_ctrl = mapping.getClasse();
+            VerbAction verbAction = mapping.getVerbAction_by(verb);
+
+
+            Object object_returnFCT = traite_MethodController (className_ctrl, verbAction, request, response);
+            // ETAPE 1 : METHODE exposer en REST API
+            if (verbAction.isRestAPI()) {
+                Gson gson = new Gson();
+                PrintWriter out = response.getWriter();
+                if (object_returnFCT instanceof ModelView) {
+                    ModelView model_view = (ModelView) object_returnFCT;
+                    out.print(gson.toJson(model_view.getData()));
+                } else {
+                    out.print(gson.toJson(object_returnFCT));
+                }
+                out.close();
+            } else if (object_returnFCT == null) System.out.println("TYPE DE RETOUR VOID");
+            // ETAPE 2 : OBJECT SIMPLE EN RETOUR
+            else objet_returnSIMPLE(object_returnFCT, request, response);
+            
+        } else {
+            throw new Error404 ("l'URL "+request.getRequestURL()+" est introuvable\r\n");
+        }
+    }
+
+
+    
+    private Object traite_MethodController (String className_ctrl, VerbAction verbAction, HttpServletRequest request, HttpServletResponse response) throws Errors {
+        
+        try {
+            Class<?> class_ctrl = Class.forName(className_ctrl);
+            Object ctrl = class_ctrl.getDeclaredConstructor().newInstance();
+            
+            Object[] params = new Object[verbAction.getParametres().length];
+            Class <?> [] type_params = new Class [verbAction.getParametres().length];
+            for (int i = 0; i < verbAction.getParametres().length; i ++) {
+                Object[] type__param = verbAction.getParametres()[i].get_config_param(request);
+                type_params[i] = (Class<?>) type__param[0];
+                params[i] = type__param[1];
+            }
+            
+            Object obj_retour = reflexion.execute_METHODE(ctrl, verbAction.getMethode(), type_params, params);
+            return obj_retour;
+
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+            | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+
+    }
+
     private void objet_returnSIMPLE (Object obj_retour, HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
+        throws ServletException, IOException, Error500 {
         /**
          * traiter l'objet retouner par la
          * fonction du controlleur specifier dans 
          * l'objet Mapping 
          */
 
-        
+
         RequestDispatcher dispatcher = null;
 
         if (obj_retour  instanceof ModelView) {
@@ -158,335 +367,45 @@ public class Front_controller extends HttpServlet {
             "</html>");
             out.close();
         } else {
-            dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
-            request.setAttribute("error", new Error("Non reconnu"));
-            dispatcher.forward(request, response);
-        }
-    }
-
-
-    private String get_dernier_uri (String request_uri) {
-        int indexlast_slash = request_uri.lastIndexOf('/');
-        if (indexlast_slash == -1) {
-            // SI AUCUN N'EST TROUVER ______
-            return request_uri;
-        } else {
-            return request_uri.substring(indexlast_slash+1);
-        } 
-    }
-
-    private void trait_mapping (Mapping mapping, String uri, RequestDispatcher dispatcher, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        if (mapping != null) {
-            // misy le mapping
-            /** TRAITE_MAPPING miretourne an le objet retourner par la fonction (FCT) */
-            Object object_returnFCT = traite_controller (mapping, request, response);
-            // ETAPE 1 : METHODE exposer en REST API
-            if (mapping.getRestAPI()) {
-                Gson gson = new Gson();
-                PrintWriter out = response.getWriter();
-                if (object_returnFCT instanceof ModelView) {
-                    ModelView model_view = (ModelView) object_returnFCT;
-                    out.print(gson.toJson(model_view.getData()));
-                } else {
-                    out.print(gson.toJson(object_returnFCT));
-                }
-                out.close();
-            }
-            // ETAPE 2 :
-            else objet_returnSIMPLE(object_returnFCT, request, response);
-            
-        } else if (uri.equals("/") && mapping == null) {
-            // PAGE INDEX PAR DEFAUT 
-            response.sendRedirect("index.jsp");
-        } else {
-            dispatcher = request.getRequestDispatcher("errors/error_framework.jsp");
-            String err = "l'URL "+request.getRequestURL()+" est introuvable\r\n"+
-            "uri: "+uri+" introuvable - invalide";
-            request.setAttribute("error", new Error(err));
-            dispatcher.forward(request, response);
-        }
-    }
-
-    
-
-    private Object traite_controller (Mapping mapping, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        
-        String ctrl_className = this.package_name+"."+mapping.getClass_name();
-        try {
-            Class <?> ctrl_class = Class.forName(ctrl_className);
-            
-            Object controller = ctrl_class.getDeclaredConstructor().newInstance();
-            Object[] params_fonct = new Object[mapping.getParams().size()];
-            Class <?>[] type_params = new Class[params_fonct.length]; 
-            boolean pas_annoter = false;
-            int i = 0;
-            for (Parametre parametre : mapping.getParams()) {
-                /** TRAITEMENT PARAMETRES de la fonction */
-                Object param = null;
-                Class <?> type = parametre.getParameter().getType();
-                if (parametre.getParameter().isAnnotationPresent(Param.class)) {
-                    Param key = parametre.getParameter().getAnnotation(Param.class);
-                    String value = request.getParameter(key.value());
-                    if (value != null) {
-                        param = type.getConstructor(String.class).newInstance(value);
-                    } else param = null;
-                } else if (parametre.getParameter().isAnnotationPresent(Param_obj.class)) {
-                    Class <?> classe = parametre.getParameter().getType();
-                    param = process_traite_ParamObj(classe, request);
-                } else if (type.isAssignableFrom(MySession.class)) {
-                    
-                    param = new MySession(request);
-                } else { // sinon (pas annoter no sady tsy MySession)
-                    pas_annoter = true;
-                    break;
-                }
-                params_fonct[i] = param;
-                type_params[i] = type; // classe
-                ++ i;
-            }
-
-            if (pas_annoter) {
-                /** si un parametre n'est pas annoter */
-                throw new Exception("ETU 002491 param tsy annoter !!");
-            } 
-            else {
-                Object obj_retour = reflexion.execute_METHODE(controller, mapping.getMethode_name(), type_params, params_fonct);
-                return obj_retour;
-            }
-            
-        } catch (Exception e) {
-            /**
-             // LISTE EXCEPTION POSSIBLES;
-             // EXCEPTION : 
-             * InstantiationException, 
-             * IllegalAccessException, 
-             * IllegalArgumentException, 
-             * InvocationTargetException, 
-             * NoSuchMethodException, 
-             * SecurityException
-             */
-            throw e;
+            throw new Error500("OBJET DE RETOUR NON RECONNNU");
         }
     }
 
 
 
-    private Object process_traite_ParamObj (Class <?> classe, HttpServletRequest request) throws Exception {
-        Field[] attrs = classe.getDeclaredFields();
-        String value = null;
-        Object obj = classe.getConstructor().newInstance();
-
-        for (Field field : attrs) {
-            String setter_name = "set"+premier_lettreMaj(field.getName());
-            if (field.isAnnotationPresent(Attr.class)) {
-                String key = field.getAnnotation(Attr.class).value();
-                value = request.getParameter(key);
-            } else {
-                String key = field.getName();
-                value = request.getParameter(key);
-            }
-
-            Method method = classe.getDeclaredMethod(setter_name, String.class);
-            method.invoke(obj, value);
-            
-        }
-        return obj;
-    }
-
-    private String premier_lettreMaj (String string) {
-        if (string == null || string.isEmpty()) {
-            return string;
-        }
-        return string.substring(0, 1)
-        .toUpperCase() + string.substring(1);
-    }
-
-
-
-
-
-    private void check_controller (String package_name)  throws URISyntaxException, Errors, IOException {
-
-        // ____ charger package ____
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        String package_path = package_name.replace('.', '/');
-        URL resource = classLoader.getResource(package_path);
-        try {
-            if (resource == null) {
-                // package vide na tsy miexiste ...
-                String err = "PACKAGE CONTROLLER EMPTY nom du paquet: "+this.package_name;
-                throw new Errors(err);
-            } else {
-                URI uri = resource.toURI(); // maka uri-package
-                Path package_ = Paths.get(uri);
-                Errors errors = new Errors(); // pour stocker l'erreurs
-                Files.walk(package_).filter(fichier -> fichier.toString().endsWith(".class"))
-                // ____ parcourir tous les fichiers dans le paquet ____
-                .forEach(fichier -> {
-                    try { this.validControlleur(fichier);} 
-                    catch (Errors e) { errors.ajout_message(e.getMessage()); }
-                });
-
-                if (!errors.getMessage().isEmpty()) {
-                    this.error = new Error(errors.getMessage());
-                    this.init_error = true; // ACTIVER L'ERREUR INIT
-                }
-            }
-
-        } catch (URISyntaxException | IOException e) {
-            // EXCEPTION TSY TOKONY ISEHO ...
-            throw e;
-        }
-    }
-
-    private void validControlleur (Path fichier) throws Errors {
-        try {
-            String path_class = package_name+"."+fichier.getFileName().toString().replace(".class", "");
-            Class <?> classe = Class.forName(path_class);
-                    
-            /**
-             * mila traitement 
-             * mitovy uri
-             * on stock les erreurs
-             */
-            /** TRAITEMENT D'UN CONTROLLEUR et SES FONCTION
-             * 
-             */
-            //  sady annoter controlleur
-            if (classe.isAnnotationPresent(Controller.class)
-            && !Modifier.isAbstract(classe.getModifiers())) {
-                
-                Mapping mapping = new Mapping(classe.getSimpleName());
-
-                Method[] methods = classe.getDeclaredMethods();
-                String error = "";// pour stocker les erreur
-
-                for (Method method : methods) {
-                    VerbAction VA = this.traitement_methode(method, classe);
-
-                    // String err = config_mapping(method, classe);
-                    // error += err;
-
-                    mapping.addVerbAction(VA); // ajouter les verbAction dans le mapping
-                }
-
-                if (!error.isEmpty()) {
-                    throw new Errors(error);
-                } else {
-                    this.hashMap_Mapping.put("", mapping); 
-                }
-            }
-            // else skip _______
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (Errors e) {
-            /**
-             * rah misy mitovy uri
-             * errors ao am classe ray ...
-             * errors.ajout_message(e.getMessage());
-             */
-            throw e;
-        }
-    }
-
-    
-
-    private VerbAction traitement_methode (Method method, Class <?> classe ) {
-        /**
-         * get parametre ...
-         * nom methode
-         */
-        ArrayList <Parametre> params = new ArrayList <Parametre> ();
-        Paranamer paranamer = new AdaptiveParanamer();
-        Parameter[] parameters = method.getParameters();
-        String[] params_name = paranamer.lookupParameterNames(method);
-
-        for (int i = 0; i < params_name.length; i++) {
-            params.add(new Parametre(params_name[i], parameters[i]));
-        }
-
-        // voir si la methode est GET ou POST par defaut GET[raha tsy annoter le methode]
-        if (method.isAnnotationPresent(Get.class)) {
-            Get get = method.getAnnotation(Get.class);
-        }
-        return null;
-    }
-
-
-
-
-    private String config_mapping (Method method, Class <?> classe) {
-        /**
-         // return un stock d'erreurs ___
-         * meme uri
-         */
-        String error = "";
-        String classe_name = classe.getSimpleName();
-
-        ArrayList <Parametre> params = new ArrayList <Parametre> ();
-        Paranamer paranamer = new AdaptiveParanamer();
-        Parameter[] parameters = method.getParameters();
-        String[] params_name = paranamer.lookupParameterNames(method);
-
-        for (int i = 0; i < params_name.length; i++) {
-            params.add(new Parametre(params_name[i], parameters[i]));
-        }
-
-        try {
-            if (method.isAnnotationPresent(Get.class)) this.get_methodGET(classe_name, method, params);
-            else if (method.isAnnotationPresent(Post.class)) this.get_methodPOST(classe_name, method, params); 
-            else {
-                
-            }
-            // this.get_methodGET(classe_name, method, params);
-        } catch (Errors e) {
-            // ERRORS mitovy uri le methode
-            error += e.getMessage();
-        }
-        return error; 
-    }
-
-    // creer une fonction pour zfficher hello world dans le console
-
-
-    private void _methodGET (String classe_name, Method method, ArrayList <Parametre> params) throws Errors {
-        String verb = "get";
-        Get get = method.getAnnotation(Get.class);
-
-        this.hashMap_Mapping.forEach(key, map)
-
-        Mapping mapping = this.hashMap_Mapping.get(get.url()); // get mapping dans la liste do get
-        if (mapping != null) {
-            String msg = "URL MITOVY AO AMIN'NY CLASS: ["+mapping.getClass_name()+"] SY ["+classe_name+"] AVEC L'URI: "+get.url()+"";
-            throw new Errors (msg);
-        } else {
-            mapping = new Mapping(classe_name, method.getName(), params);
-            if (method.isAnnotationPresent(RestAPI.class)) mapping.setRestAPI(true);
-            this.hashMap_Mapping.put(get.url(), mapping); // ALEFA AO ANATY LIST METHODE DOGET
-        }
-    }
-
-    private void _methodPOST (String classe_name, Method method, ArrayList <Parametre> params) throws Errors {
-        Post post = method.getAnnotation(Post.class);
-        System.out.println("POST");
-
-        Mapping mapping = this.hashMap_Mapping.get(post.url());
-        if (mapping != null) {
-            String msg = "URL MITOVY AO AMIN'NY CLASS: ["+mapping.getClass_name()+"] SY ["+classe_name+"] AVEC L'URI: "+post.url()+"";
-            throw new Errors (msg);
-        } else {
-            mapping = new Mapping(classe_name, method.getName(), params);
-            if (method.isAnnotationPresent(RestAPI.class)) mapping.setRestAPI(true);
-            this.hashMap_Mapping.put(post.url(), mapping);
-        }
-    }
-
+    private static String style = 
+    "        body {\r\n" +
+    "            font-family: consolas;\r\n" +
+    "            background-color: #fff;\r\n" +
+    "            color: #555;\r\n" +
+    "            text-align: center;\r\n" +
+    "            padding: 120px;\r\n" +
+    "        }\r\n" +
+    "        \r\n" +
+    "        h1 {\r\n" +
+    "            font-size: 120px;\r\n" +
+    "            color: #f4645f;\r\n" +
+    "            margin: 0;\r\n" +
+    "        }\r\n" +
+    "        \r\n" +
+    "        h2 {\r\n" +
+    "            font-size: 24px;\r\n" +
+    "            margin: 20px 0;\r\n" +
+    "        }\r\n" +
+    "        \r\n" +
+    "        p {\r\n" +
+    "            font-size: 16px;\r\n" +
+    "            color: #777;\r\n" +
+    "        }\r\n" +
+    "        \r\n" +
+    "        a {\r\n" +
+    "            color: #f4645f;\r\n" +
+    "            text-decoration: none;\r\n" +
+    "        }";
 
 
     private String get_classeName () {
         return this.getClass().getSimpleName();
     }
 
-    private void setGet(boolean get) { this.get = get; }
-    private void setPost(boolean post) { this.post = post; }
 }
