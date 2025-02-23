@@ -1,4 +1,4 @@
-package mg.itu.servlets;
+package mg.ITU.servlets;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
@@ -16,18 +16,18 @@ import java.net.*;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
-import mg.itu.Err.Error404;
-import mg.itu.Err.Error500;
-import mg.itu.Err.Errors;
-import mg.itu.annotation.*;
-import mg.itu.beans.*;
-import mg.itu.reflect.Reflexion;
+import mg.ITU.DAO.reflexion.Reflexion;
+import mg.ITU.Err.Error404;
+import mg.ITU.Err.Error500;
+import mg.ITU.Err.Errors;
+import mg.ITU.annotation.*;
+import mg.ITU.beans.*;
     
 public class Front_controller extends HttpServlet {
 
     protected String package_name;
     protected HashMap <String, Mapping> url_Mapping;
-    protected Reflexion reflexion;
+    // protected Reflexion reflexion;
     private static Exception error500 = null;
     private Verb verb;
 
@@ -39,7 +39,7 @@ public class Front_controller extends HttpServlet {
         
         try {
             this.package_name.isEmpty(); 
-            reflexion = new Reflexion();
+            // reflexion = new Reflexion();
             url_Mapping = new HashMap<String, Mapping> ();
 
             this.check_controller(package_name);
@@ -315,7 +315,8 @@ public class Front_controller extends HttpServlet {
                 params[i] = type__param[1];
             }
             
-            Object obj_retour = reflexion.execute_METHODE(ctrl, verbAction.getMethode(), type_params, params);
+            // Object obj_retour = reflexion.execute_METHODE(ctrl, verbAction.getMethode(), type_params, params);
+            Object obj_retour = Reflexion.executeMethod_WR(ctrl, verbAction.getMethode(), params, type_params);
             return obj_retour;
 
         } catch (ClassNotFoundException e) {

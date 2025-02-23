@@ -1,4 +1,4 @@
-package mg.itu.Err;
+package mg.ITU.Err;
 
 public class Error404 extends Exception {
     

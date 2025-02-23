@@ -1,4 +1,4 @@
-package mg.itu.beans;
+package mg.ITU.beans;
 
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Field;
@@ -6,10 +6,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import jakarta.servlet.http.HttpServletRequest;
-import mg.itu.Err.Errors;
-import mg.itu.annotation.Attr;
-import mg.itu.annotation.Param;
-import mg.itu.annotation.Param_obj;
+import mg.ITU.Err.Errors;
+import mg.ITU.annotation.Attr;
+import mg.ITU.annotation.Param;
+import mg.ITU.annotation.Param_obj;
 
 public class Parametre {
 
