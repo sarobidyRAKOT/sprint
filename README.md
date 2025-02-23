@@ -1,5 +1,11 @@
 # SPRINT
 
+   > LIB :
+      . Generic-DAO
+      . gson
+      . paranamer
+      . servlet-api (jar servlet)
+
 inclure tous les library :
    - servlet-api.jar
 --> CLIQUER sprint.bat pour lancer

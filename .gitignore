@@ -1,0 +1,4 @@
+change_jdk.bat
+/build
+/dist
+/.vscode

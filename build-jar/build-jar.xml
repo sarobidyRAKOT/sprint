@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<project name="build-jar" basedir="..">
+
+
+    <!-- PROPERTY -->
+    <property name="jar-name" value="sprint-11.jar"/>
+    <property name="build.dir" value="${basedir}/build"/>
+    <property name="dist.dir" value="${basedir}/dist"/>
+    <property name="src.java.dir" value="${basedir}/src/mg/itu"/>
+    <property name="lib.dir" value="${basedir}/lib"/>
+    <!-- <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 5/FRAMEWORK/POC/Ticketing/lib"/> -->
+    <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 6/Frame work/SPRINT/test/lib"/>
+
+
+    <path id="classpath" >
+        <fileset dir="${lib.dir}" >
+        
+            <include name="**/*.jar"/>
+        </fileset>
+    </path>
+    <tstamp>
+        <format property="date_duJour" pattern="dd/MM/yyyy hh:mm:ss aa"/>
+    </tstamp>
+    <!-- PROPERTY DONE -->
+
+    
+    
+
+    <target name="initial">
+        <echo>Initialize - ${date_duJour}</echo>
+        <echo> JDK-VERSION: ${ant.java.version} - ANT-VERSION: ${ant.version} </echo>
+    </target>
+
+    <target name="clean" depends="initial">
+        <echo>[Clean Start]</echo>
+        <delete dir="${build.dir}"/>
+        <delete dir="${dist.dir}"/>
+        <echo>[Clean Done]</echo>
+    </target>
+    
+    <target name="build" depends="clean">
+        <echo>[Create dir Start]</echo>
+        <mkdir dir="${build.dir}"/> 
+        <mkdir dir="${dist.dir}"/> 
+
+        <echo>[Create dir Done]</echo>
+    </target>
+    
+    <target name="compile" depends="build">
+        <echo>[Compilation Start]</echo>
+        <javac srcdir="${src.java.dir}" destdir="${build.dir}" nowarn="true" debug="true" debuglevel="lines,vars,source" description="off" classpathref="classpath" includeantruntime="false" encoding="iso-8859-1">
+            <compilerarg value="-Xdoclint:none"/>
+        </javac>
+        <echo>[Compilation Done]</echo>
+    </target>
+
+    <target name="build-jar-SPRINT" depends="compile">
+        <echo>Build EJB JAR</echo>
+        <jar basedir="${build.dir}" destfile="${dist.dir}/${jar-name}"/>
+        <echo>End Build EJB JAR</echo>
+
+        <!-- COPIE FICHIER JAR DANS UN PROJET QUI L'UTILISE -->
+        <copy todir="${dest-jarFile}">
+            <fileset dir="${dist.dir}" />
+        </copy>
+    </target>
+
+    
+
+    <target name="default" depends="build-jar-SPRINT">
+        <echo>Done BUILD JAR - ${date_duJour} jar-name: ${jar-name}</echo>
+    </target>
+
+
+</project>

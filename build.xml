@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="BUILD-JAR" default="default" basedir="." >
+    <import file="build-jar/build-jar.xml"/>
+</project>

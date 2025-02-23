@@ -1,4 +1,4 @@
-package mg.itu.beans;
+package mg.ITU.beans;
 
 
 /**
