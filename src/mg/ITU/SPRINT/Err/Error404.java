@@ -1,4 +1,4 @@
-package mg.ITU.Err;
+package mg.ITU.SPRINT.Err;
 
 public class Error404 extends Exception {
     

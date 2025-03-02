@@ -1,4 +1,4 @@
-package mg.ITU.beans;
+package mg.ITU.SPRINT.beans;
 
 public enum Verb {
     POST,

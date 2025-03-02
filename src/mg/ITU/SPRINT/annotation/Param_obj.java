@@ -1,12 +1,12 @@
-package mg.ITU.annotation;
+package mg.ITU.SPRINT.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target (ElementType.FIELD)
+@Target (ElementType.PARAMETER)
 @Retention (RetentionPolicy.RUNTIME)
-public @interface Attr {
+public @interface Param_obj {
     String value ();
 }

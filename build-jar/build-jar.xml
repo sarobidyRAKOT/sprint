@@ -7,15 +7,15 @@
     <property name="jar-name" value="sprint-11.jar"/>
     <property name="build.dir" value="${basedir}/build"/>
     <property name="dist.dir" value="${basedir}/dist"/>
-    <property name="src.java.dir" value="${basedir}/src/mg/itu"/>
+    <property name="src.java.dir" value="${basedir}/src/mg/ITU/SPRINT"/>
     <property name="lib.dir" value="${basedir}/lib"/>
-    <!-- <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 5/FRAMEWORK/POC/Ticketing/lib"/> -->
-    <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 6/Frame work/SPRINT/test/lib"/>
+    <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 6/Frame work/POC/Ticketing/lib"/>
+    <!-- <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 6/Frame work/SPRINT/test/lib"/> -->
 
 
     <path id="classpath" >
         <fileset dir="${lib.dir}" >
-        
+
             <include name="**/*.jar"/>
         </fileset>
     </path>

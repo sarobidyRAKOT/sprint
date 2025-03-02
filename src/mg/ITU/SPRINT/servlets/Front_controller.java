@@ -1,4 +1,4 @@
-package mg.ITU.servlets;
+package mg.ITU.SPRINT.servlets;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
@@ -17,11 +17,11 @@ import java.net.*;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import mg.ITU.DAO.reflexion.Reflexion;
-import mg.ITU.Err.Error404;
-import mg.ITU.Err.Error500;
-import mg.ITU.Err.Errors;
-import mg.ITU.annotation.*;
-import mg.ITU.beans.*;
+import mg.ITU.SPRINT.Err.Error404;
+import mg.ITU.SPRINT.Err.Error500;
+import mg.ITU.SPRINT.Err.Errors;
+import mg.ITU.SPRINT.annotation.*;
+import mg.ITU.SPRINT.beans.*;
     
 public class Front_controller extends HttpServlet {
 

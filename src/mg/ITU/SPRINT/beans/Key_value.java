@@ -1,4 +1,4 @@
-package mg.ITU.beans;
+package mg.ITU.SPRINT.beans;
 
 import java.util.ArrayList;
 
