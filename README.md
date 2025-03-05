@@ -74,3 +74,5 @@ inclure tous les library :
    OBJECTIF : implementation du methode POST et GET
 - SPRINT 11 :
    OBJECTIF : GESTION D'EXCEPTION au ùoùent du check controller
+
+   ON NE DEFINI PAS LE CONSTRUCTEUR DU CONTROLLER (Constructeur par defaut)

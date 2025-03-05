@@ -5,12 +5,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Annotation_controller
- */
-@Retention (RetentionPolicy.RUNTIME)
-@Target (ElementType.TYPE)
-public @interface Controller {
-
-    
+@Retention(RetentionPolicy.RUNTIME)  // L'annotation doit être accessible à l'exécution
+@Target(ElementType.TYPE)  // Peut être appliqué sur les classes
+public @interface Controlleur {
 }
