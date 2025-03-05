@@ -4,18 +4,17 @@
 
 
     <!-- PROPERTY -->
-    <property name="jar-name" value="sprint-11.jar"/>
+    <property name="jar-name" value="sprint-16.jar"/>
     <property name="build.dir" value="${basedir}/build"/>
     <property name="dist.dir" value="${basedir}/dist"/>
     <property name="src.java.dir" value="${basedir}/src/mg/ITU/SPRINT"/>
     <property name="lib.dir" value="${basedir}/lib"/>
-    <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 6/Frame work/POC/Ticketing/lib"/>
-    <!-- <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 6/Frame work/SPRINT/test/lib"/> -->
+    <!-- <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 6/Frame work/POC/Ticketing/lib"/> -->
+    <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 6/Frame work/SPRINT/test/lib"/>
 
 
     <path id="classpath" >
         <fileset dir="${lib.dir}" >
-
             <include name="**/*.jar"/>
         </fileset>
     </path>
@@ -49,8 +48,10 @@
     
     <target name="compile" depends="build">
         <echo>[Compilation Start]</echo>
-        <javac srcdir="${src.java.dir}" destdir="${build.dir}" nowarn="true" debug="true" debuglevel="lines,vars,source" description="off" classpathref="classpath" includeantruntime="false" encoding="iso-8859-1">
-            <compilerarg value="-Xdoclint:none"/>
+        <javac srcdir="${src.java.dir}" destdir="${build.dir}" 
+           nowarn="true" debug="true" debuglevel="lines,vars,source"
+           classpathref="classpath" includeantruntime="false" encoding="UTF-8">
+            <compilerarg value="-Xdoclint:none" />
         </javac>
         <echo>[Compilation Done]</echo>
     </target>

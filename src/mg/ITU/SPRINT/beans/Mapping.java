@@ -12,7 +12,7 @@ public class Mapping {
         this.classe = classe;
         /**
          * TAILLE verbAction ...
-         * 2 (post)
+         * 2 VERB SEULEMENT (POST et GET)
          */
         this.verbActions = new HashSet <VerbAction>(2);
     }    
@@ -24,6 +24,7 @@ public class Mapping {
                 verbAction = va;
                 break;
             }
+            
         }
 
         return verbAction;

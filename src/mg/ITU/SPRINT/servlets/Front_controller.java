@@ -3,26 +3,42 @@ package mg.ITU.SPRINT.servlets;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.nio.file.*;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
 import com.thoughtworks.paranamer.AdaptiveParanamer;
 import com.thoughtworks.paranamer.Paranamer;
 
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.net.*;
 
-import jakarta.servlet.*;
-import jakarta.servlet.http.*;
 import mg.ITU.DAO.reflexion.Reflexion;
+// import jakarta.servlet.*;
+// import jakarta.servlet.http.*;
+// import mg.ITU.DAO.reflexion.Reflexion;
 import mg.ITU.SPRINT.Err.Error404;
 import mg.ITU.SPRINT.Err.Error500;
 import mg.ITU.SPRINT.Err.Errors;
 import mg.ITU.SPRINT.annotation.*;
 import mg.ITU.SPRINT.beans.*;
     
+
+@MultipartConfig (
+    fileSizeThreshold = 1024 * 1024 * 2, // 2MB : Taille maximale du fichier en mémoire avant qu'il ne soit écrit sur le disque
+    maxFileSize = 1024 * 1024 * 20,      // 10MB : Taille maximale autorisée pour un fichier téléchargé
+    maxRequestSize = 1024 * 1024 * 50    // 50MB : Taille totale autorisée pour tous les fichiers dans la requête
+)
 public class Front_controller extends HttpServlet {
 
     protected String package_name;
@@ -34,6 +50,8 @@ public class Front_controller extends HttpServlet {
 
     @Override
     public void init(ServletConfig config) throws ServletException {
+        
+        
         super.init(config);
         this.package_name = config.getInitParameter("package_controllers");
         
@@ -41,8 +59,9 @@ public class Front_controller extends HttpServlet {
             this.package_name.isEmpty(); 
             // reflexion = new Reflexion();
             url_Mapping = new HashMap<String, Mapping> ();
-
+            
             this.check_controller(package_name);
+            // System.out.println("INIT _________________________________");
         } catch (NullPointerException e) {
             e.printStackTrace();
         } catch (Error500 e) {
@@ -80,42 +99,85 @@ public class Front_controller extends HttpServlet {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.getWriter().write(Front_controller.HTML500(Front_controller.error500.getMessage()));
         } else {
-            String url = "/"+this.get_dernier_uri(request.getRequestURI());
-            Mapping mapping = this.url_Mapping.get(url);
-            try {
-                exceution_mapp (mapping, url, response, request);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (Errors e) {
-                e.printStackTrace();
-            } catch (Error404 e) {
-                response.setContentType("text/html;charset=UTF-8");
-                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                response.getWriter().write(Front_controller.HTML404 (e.getMessage()));
-                e.printStackTrace();
-            } catch (ServletException e) {
-                e.printStackTrace();
-            } catch (Error500 e) {
-                response.setContentType("text/html;charset=UTF-8");
-                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                response.getWriter().write(Front_controller.HTML500(e.getMessage()));
-                e.printStackTrace();
-            }
+            String contextPath = request.getContextPath();
+            String requestURI = request.getRequestURI();
+            /** lenght + 1 pour enlever `/`*/
+            String url = requestURI.substring(contextPath.length());
+            // System.out.println("URL "+ url+" "+this.url_Mapping.size());
 
+            // for (String u : this.url_Mapping.keySet()) {
+            //     System.out.println(u);
+            // }
+
+            Mapping mapping = this.url_Mapping.get(url);
+            this.traite_mapping(request, response, url, mapping, this.verb);
         }
     }
 
+    // EXECUTION MAPPING ...
+    private void traite_mapping (HttpServletRequest request, HttpServletResponse response, String url, Mapping mapping, Verb verb) throws IOException {
 
-    private String get_dernier_uri (String request_uri) {
-        int indexlast_slash = request_uri.lastIndexOf('/');
-        if (indexlast_slash == -1) {
-            // SI AUCUN N'EST TROUVER ______
-            return request_uri;
-        } else {
-            return request_uri.substring(indexlast_slash+1);
-        } 
+        try {
+            VerbAction verbAction = get_VerbAction(request, mapping, verb);
+            String className_ctrl = mapping.getClasse();
+
+            execute_mapping (className_ctrl, verbAction, url, response, request);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Errors e) {
+            e.printStackTrace();
+        } catch (Error404 e) {
+            response.setContentType("text/html;charset=UTF-8");
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            response.getWriter().write(Front_controller.HTML404 (e.getMessage(), request.getContextPath()));
+            e.printStackTrace();
+        } catch (ServletException e) {
+            e.printStackTrace();
+        } catch (Error500 e) {
+            response.setContentType("text/html;charset=UTF-8");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write(Front_controller.HTML500(e.getMessage()));
+            e.printStackTrace();
+        }
+
     }
 
+    private VerbAction get_VerbAction (HttpServletRequest request, Mapping mapping, Verb verb) throws Error404 {
+        if (mapping != null) {
+            return  mapping.getVerbAction_by(verb);
+        } else {
+            throw new Error404 ("l'URL "+request.getRequestURL()+" est introuvable\r\n");
+        }
+    }
+    
+    private void execute_mapping (String className_ctrl, VerbAction verbAction, String uri, HttpServletResponse response, HttpServletRequest request) throws IOException, Errors, Error404, ServletException, Error500 {
+
+        /**
+         * EXECUTION MAPPING
+         */
+
+
+        // ETAPE 1 : METHODE exposer en REST API
+        if (verbAction == null) {
+            throw new Error500("VERB NON TROUVER ...");
+        } 
+        
+        Object object_returnFCT = traite_MethodController (className_ctrl, verbAction, request, response);
+        if (verbAction.isRestAPI()) {
+            Gson gson = new Gson();
+            PrintWriter out = response.getWriter();
+            if (object_returnFCT != null && object_returnFCT instanceof ModelView) {
+                ModelView model_view = (ModelView) object_returnFCT;
+                out.print(gson.toJson(model_view.getData()));
+            } else {
+                out.print(gson.toJson(object_returnFCT));
+            }
+            out.close();
+        } else if (object_returnFCT == null) System.out.println("TYPE DE RETOUR VOID");
+        // ETAPE 2 : OBJECT SIMPLE EN RETOUR
+        else objet_returnSIMPLE(object_returnFCT, request, response);
+        
+    }
 
 
 
@@ -136,6 +198,7 @@ public class Front_controller extends HttpServlet {
                 // ____ parcourir tous les fichiers dans le paquet ____
                 Files.walk(package_).filter(fichier -> fichier.toString().endsWith(".class"))
                 .forEach(fichier -> {
+                    // System.out.println("FONTION "+fichier);
                     try { this.validControlleur(fichier); } 
                     catch (Error500 e) {
                         // manapaka an'le boucle raha misy exception fa tsy afaka throw exception
@@ -157,12 +220,15 @@ public class Front_controller extends HttpServlet {
         try {
             String path_class = package_name+"."+fichier.getFileName().toString().replace(".class", "");
             Class <?> classe = Class.forName(path_class);
-                    
+            
+            
+            
             /** TRAITEMENT D'UN CONTROLLEUR et SES FONCTION
-            //  sady annoter controlleur
+             //  sady annoter controlleur
              */
-            if (classe.isAnnotationPresent(Controller.class)
-            && !Modifier.isAbstract(classe.getModifiers())) {
+
+            if (classe.isAnnotationPresent(Controlleur.class)) {
+            //     System.out.println("annoter "+classe.getName());
                 Method[] methods = classe.getDeclaredMethods();
 
                 for (Method method : methods) {
@@ -199,7 +265,7 @@ public class Front_controller extends HttpServlet {
 
         if (method.isAnnotationPresent(Get.class)) VA = new VerbAction(method.getName(), Verb.GET, method.getAnnotation(Get.class).url(), restAPI);
         else if (method.isAnnotationPresent(Post.class)) VA = new VerbAction(method.getName(), Verb.POST, method.getAnnotation(Post.class).url(), restAPI);
-        else VA = new VerbAction(method.getName(), Verb.GET, method.getAnnotation(Get.class).url(), restAPI);
+        else VA = new VerbAction(method.getName(), Verb.GET, method.getName(), restAPI);
         
         VA.setParametres(params); // ajouter les parametres dans le verbAction VA
         return VA;
@@ -244,7 +310,7 @@ public class Front_controller extends HttpServlet {
         return html500;
     }
 
-    private static String HTML404 (String message) {
+    private static String HTML404 (String message, String contextPath) {
         String html404 = "<!DOCTYPE html>\r\n" +
         "<html lang=\"en\">\r\n" +
         "<head>\r\n" +
@@ -261,7 +327,7 @@ public class Front_controller extends HttpServlet {
         "    <h2>Oops! Nothing was found</h2>\r\n" +
         "    <p>The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.</p>\r\n" +
         "    <p><b>"+message+"</b></p>\r\n" +
-        "    <p><a href=\"/\">Return to homepage</a></p>\r\n" +
+        "    <p><a href=\""+contextPath+"\">Return to homepage</a></p>\r\n" +
         "</body>\r\n" +
         "</html>";
     
@@ -270,40 +336,13 @@ public class Front_controller extends HttpServlet {
 
 
 
-    private void exceution_mapp (Mapping mapping, String uri, HttpServletResponse response, HttpServletRequest request) throws IOException, Errors, Error404, ServletException, Error500 {
-        if (mapping != null) {
-            
-            /** TRAITE_MAPPING miretourne an le objet retourner par la fonction (FCT) */
-            String className_ctrl = mapping.getClasse();
-            VerbAction verbAction = mapping.getVerbAction_by(verb);
-
-
-            Object object_returnFCT = traite_MethodController (className_ctrl, verbAction, request, response);
-            // ETAPE 1 : METHODE exposer en REST API
-            if (verbAction.isRestAPI()) {
-                Gson gson = new Gson();
-                PrintWriter out = response.getWriter();
-                if (object_returnFCT instanceof ModelView) {
-                    ModelView model_view = (ModelView) object_returnFCT;
-                    out.print(gson.toJson(model_view.getData()));
-                } else {
-                    out.print(gson.toJson(object_returnFCT));
-                }
-                out.close();
-            } else if (object_returnFCT == null) System.out.println("TYPE DE RETOUR VOID");
-            // ETAPE 2 : OBJECT SIMPLE EN RETOUR
-            else objet_returnSIMPLE(object_returnFCT, request, response);
-            
-        } else {
-            throw new Error404 ("l'URL "+request.getRequestURL()+" est introuvable\r\n");
-        }
-    }
-
 
     
-    private Object traite_MethodController (String className_ctrl, VerbAction verbAction, HttpServletRequest request, HttpServletResponse response) throws Errors {
+    private Object traite_MethodController (String className_ctrl, VerbAction verbAction, HttpServletRequest request, HttpServletResponse response) {
         
         try {
+
+
             Class<?> class_ctrl = Class.forName(className_ctrl);
             Object ctrl = class_ctrl.getDeclaredConstructor().newInstance();
             
@@ -311,12 +350,14 @@ public class Front_controller extends HttpServlet {
             Class <?> [] type_params = new Class [verbAction.getParametres().length];
             for (int i = 0; i < verbAction.getParametres().length; i ++) {
                 Object[] type__param = verbAction.getParametres()[i].get_config_param(request);
-                type_params[i] = (Class<?>) type__param[0];
-                params[i] = type__param[1];
+                type_params[i] = (Class<?>) type__param[0]; // indice 0 type du parametre
+                params[i] = type__param[1]; // indice 1 le parametre
             }
-            
+
+            // System.out.println("TAILLE "+params.length+" "+type_params.length);
             // Object obj_retour = reflexion.execute_METHODE(ctrl, verbAction.getMethode(), type_params, params);
             Object obj_retour = Reflexion.executeMethod_WR(ctrl, verbAction.getMethode(), params, type_params);
+
             return obj_retour;
 
         } catch (ClassNotFoundException e) {
@@ -353,23 +394,48 @@ public class Front_controller extends HttpServlet {
 
             dispatcher.forward(request, response);
         } else if (obj_retour instanceof String) {
-            PrintWriter out = response.getWriter();
-            out.println("<!DOCTYPE html>\r\n"+
-            "<html lang=\"en\">\r\n"+
-            "    <head>\r\n"+
-            "        <meta charset=\"UTF-8\">\r\n"+
-            "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"+
-            "        <title></title>\r\n"+ // titre modifiable
-            "    </head>\r\n"+
-            "    <body>\r\n"+
-            "        <h2>"+this.get_classeName()+"</h2>\r\n"+
-            "        <p>"+obj_retour.toString()+"</p>\r\n"+
-            "    </body>\r\n"+
-            "</html>");
-            out.close();
+            if (((String) obj_retour).startsWith("redirect")) {
+                this.redirect (response, request, (String) obj_retour);
+            } else {
+                // PrintWriter out = response.getWriter();
+                String text = "<!DOCTYPE html>\r\n"+
+                "<html lang=\"en\">\r\n"+
+                "    <head>\r\n"+
+                "        <meta charset=\"UTF-8\">\r\n"+
+                "        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"+
+                "        <title></title>\r\n"+ // titre modifiable
+                "    </head>\r\n"+
+                "    <body>\r\n"+
+                "        <h2>"+this.get_classeName()+"</h2>\r\n"+
+                "        <p>"+obj_retour.toString()+"</p>\r\n"+
+                "    </body>\r\n"+
+                "</html>";
+                // out.close();
+
+                response.getWriter().write(text);
+
+            }
         } else {
             throw new Error500("OBJET DE RETOUR NON RECONNNU");
         }
+    }
+
+    //  FONCTION POUR TRAITER LES RETOUR `STRING` DU CONTROLLEUR
+    private void redirect (HttpServletResponse response, HttpServletRequest request, String retour) throws IOException, Error500 {
+        // redirect:/url
+        
+        Pattern pattern = Pattern.compile("^redirect:(/.*)");
+        Matcher matcher = pattern.matcher(retour);
+        
+        if (matcher.matches()) {
+            String url = matcher.group(1);  // Extrait "url : le mot entre ()"
+
+            response.sendRedirect(request.getContextPath()+url);
+            // this.traite_mapping(request, response, url, mapping, Verb.GET);
+        } else {
+            throw new Error500("FORMAT `redirect incorrect`; VALIDE FORMAT: redirect:/URL");
+        }
+
     }
 
 

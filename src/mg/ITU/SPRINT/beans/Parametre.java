@@ -17,29 +17,41 @@ public class Parametre {
     private Parameter parameter;
 
 
-
     public Parametre (String nom, Parameter parameter) {
         this.nom = nom;
         this.parameter = parameter;
     }
 
+
     public Object[] get_config_param (HttpServletRequest request) throws Errors, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+        
+        /**
+         * TRAITREMENT DU PARAMETRES ...
+         */
+        
         Class <?> type = this.getParameter().getType();
         Object param = null;
+
         if (this.getParameter().isAnnotationPresent(Param.class)) {
             String value = request.getParameter(this.getParameter().getAnnotation(Param.class).value());
-            if (value != null) {
-                param = type.getConstructor(String.class).newInstance(value);
-            } else param = null;
+            if (value != null) param = type.getConstructor(String.class).newInstance(value);
+            else param = null;
         } else if (this.getParameter().isAnnotationPresent(Param_obj.class)) {
             Class <?> classe = this.getParameter().getType();
             param = process_traite_ParamObj(classe, request);
         } else if (type.isAssignableFrom(MySession.class)) {
-        
             param = new MySession(request);
         } else { // sinon (pas annoter no sady tsy MySession)
             type = null;
             throw new Errors ("ETU 002491 PARAMETRE FONCTION CONTROLLER TSY ANNOTER [Param/Param_obj] NO SADY TSY [MySession]");
+        }
+
+        // Pour les fichier upload -> Type de donnée MultipartFile...
+        if (type.isAssignableFrom(MultipartFile.class) && this.getParameter().isAnnotationPresent(Param.class)) {
+            Param p = this.getParameter().getAnnotation(Param.class);
+            // System.out.println("type nultipart "+p.value());
+
+            param = new MultipartFile (request, p.value());
         }
 
         Object[] type__param = new Object[2];
@@ -47,6 +59,7 @@ public class Parametre {
         type__param[1] = param;
         return type__param;
     }
+
 
     private Object process_traite_ParamObj (Class <?> classe, HttpServletRequest request) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
         Field[] attrs = classe.getDeclaredFields();
