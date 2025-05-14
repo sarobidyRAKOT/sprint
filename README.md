@@ -1,9 +1,9 @@
 # SPRINT
-## PRE-REQUIS (LIB JAVA .jar)
-   > Generic-DAO
-   > gson
-   > paranamer
-   > servlet-api (jar servlet)
+### PRE-REQUIS (LIB JAVA .jar)
+1. Generic-DAO
+2. gson
+3. paranamer
+4. servlet-api (jar servlet)
 
 inclure tous les library :
    - servlet-api.jar
