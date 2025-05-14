@@ -1,10 +1,9 @@
 # SPRINT
-
-   > LIB :
-      . Generic-DAO
-      . gson
-      . paranamer
-      . servlet-api (jar servlet)
+## PRE-REQUIS (LIB JAVA .jar)
+   > Generic-DAO
+   > gson
+   > paranamer
+   > servlet-api (jar servlet)
 
 inclure tous les library :
    - servlet-api.jar
@@ -76,3 +75,12 @@ inclure tous les library :
    OBJECTIF : GESTION D'EXCEPTION au ùoùent du check controller
 
    ON NE DEFINI PAS LE CONSTRUCTEUR DU CONTROLLER (Constructeur par defaut)
+
+- SPRINT 12 : Upload file 
+- SPRINT 13 : Form valide
+- SPRINT 14 : Champ de formulaire avec session
+- SPRINT 15 : Méthode protégés par authentification
+- SPRINT 16 : Classe protégés par authentification
+- SPRINT 17 : Redirection (SEULEMENT VERS UN METHODE de verbe GET)
+
+- m

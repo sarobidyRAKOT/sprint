@@ -10,15 +10,4 @@ public class Error500 extends Exception {
         super();
     }
 
-    @Override
-    public String getMessage() {
-        return super.getMessage();
-    }
-
-    public void setMes (String message) {
-        this.mes = message;
-    }
-    public String getMes() {
-        return mes;
-    }
 }

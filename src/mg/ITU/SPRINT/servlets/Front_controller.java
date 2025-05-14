@@ -31,6 +31,7 @@ import mg.ITU.SPRINT.Err.Error404;
 import mg.ITU.SPRINT.Err.Error500;
 import mg.ITU.SPRINT.Err.Errors;
 import mg.ITU.SPRINT.annotation.*;
+import mg.ITU.SPRINT.annotation.security.Authentified_Classe;
 import mg.ITU.SPRINT.beans.*;
     
 
@@ -139,7 +140,6 @@ public class Front_controller extends HttpServlet {
             response.getWriter().write(Front_controller.HTML500(e.getMessage()));
             e.printStackTrace();
         }
-
     }
 
     private VerbAction get_VerbAction (HttpServletRequest request, Mapping mapping, Verb verb) throws Error404 {
@@ -150,12 +150,12 @@ public class Front_controller extends HttpServlet {
         }
     }
     
+    
     private void execute_mapping (String className_ctrl, VerbAction verbAction, String uri, HttpServletResponse response, HttpServletRequest request) throws IOException, Errors, Error404, ServletException, Error500 {
 
         /**
          * EXECUTION MAPPING
          */
-
 
         // ETAPE 1 : METHODE exposer en REST API
         if (verbAction == null) {
@@ -180,7 +180,6 @@ public class Front_controller extends HttpServlet {
     }
 
 
-
     private void check_controller (String package_name)  throws Error500 {
 
         // ____ charger package ____
@@ -194,20 +193,12 @@ public class Front_controller extends HttpServlet {
             } else {
                 URI uri = resource.toURI(); // maka uri-package
                 Path package_ = Paths.get(uri);
-                Errors error = new Errors();
                 // ____ parcourir tous les fichiers dans le paquet ____
                 Files.walk(package_).filter(fichier -> fichier.toString().endsWith(".class"))
                 .forEach(fichier -> {
-                    // System.out.println("FONTION "+fichier);
-                    try { this.validControlleur(fichier); } 
-                    catch (Error500 e) {
-                        // manapaka an'le boucle raha misy exception fa tsy afaka throw exception
-                        error.setMessage(e.getMessage());
-                    }
+                    try { validControlleur(fichier); } 
+                    catch (Error500 e) { e.printStackTrace(); }
                 });
-                if (!error.getMessage().isEmpty()) {
-                    throw new Error500(error.getMessage());
-                }
             }
 
         } catch (URISyntaxException | IOException e) {
@@ -342,20 +333,23 @@ public class Front_controller extends HttpServlet {
         
         try {
 
-
             Class<?> class_ctrl = Class.forName(className_ctrl);
             Object ctrl = class_ctrl.getDeclaredConstructor().newInstance();
             
             Object[] params = new Object[verbAction.getParametres().length];
             Class <?> [] type_params = new Class [verbAction.getParametres().length];
+            // Traitement parametresd ...
             for (int i = 0; i < verbAction.getParametres().length; i ++) {
                 Object[] type__param = verbAction.getParametres()[i].get_config_param(request);
                 type_params[i] = (Class<?>) type__param[0]; // indice 0 type du parametre
                 params[i] = type__param[1]; // indice 1 le parametre
             }
 
-            // System.out.println("TAILLE "+params.length+" "+type_params.length);
-            // Object obj_retour = reflexion.execute_METHODE(ctrl, verbAction.getMethode(), type_params, params);
+
+            if (class_ctrl.isAnnotationPresent(Authentified_Classe.class)) {
+
+            }
+            
             Object obj_retour = Reflexion.executeMethod_WR(ctrl, verbAction.getMethode(), params, type_params);
 
             return obj_retour;
