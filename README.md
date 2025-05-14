@@ -1,14 +1,16 @@
 # SPRINT
 ### PRE-REQUIS (LIB JAVA .jar)
-1. Generic-DAO
-2. gson
-3. paranamer
-4. servlet-api (jar servlet)
+1. Generic-DAO `https://github.com/sarobidyRAKOT/DAO.git` il suffit de taper `ant` et récuperer le jar dans le `/dist/Generic-DAO.jar`
+2. gson `gson-2.4.jar`
+3. paranamer `paranamer-3.8.jar`
+4. Tomcat 10 
+5. servlet-api (jar servlet) `servlet-api.jar` récuperer dans le tomcat 10
 
-inclure tous les library :
-   - servlet-api.jar
---> CLIQUER sprint.bat pour lancer
+### BUILD 
+- Modilier le fichier `/build-jar/build-jar.xml`, changer le destination du fichier `.jar` et son nom si vous voulez
+- Taper `ant` dans le repertoire racine
 
+### DETAILS ...
 - sprint 0:
    test gitHub
    affiche url dans index (/)
