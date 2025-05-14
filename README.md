@@ -12,27 +12,28 @@
 
 ### DETAILS ...
 - **SPRINT 0 :** test gitHub et afficher url dans index (/)
-- sprint 1:
-   afficher les listes de controllers annoter an Annotation_controller
-- sprint 2:
-   Annotation des controllers -> classe: Annotation controller
-- sprint 3:
-   liste controller -> url + nom de la classe controller + methode appelée 
-- sprint 4:
-   . Objectif: Envoyer des données du controller vers view
-   . Etapes:
-      Côté Framework:
-         créer une classe ModelView qui aura pour attributs:
-            . String url[url de destination après l'exécution de méthode], 
-            . HashMap<String : nom de la variable, Object: sa valeur> data [donnée à envoyer vers cette view],
-         créer une fonction "AddObject" qui a comme type de retour void pour pouvoir mettre les données dans HashMap "data"
-         Dans FrontController,dans ProcessRequest, récupérer les données issues de la méthode annotée Get, si les data sont de type string --> retourner la valeur directement, si les données sont de type ModelView --> récupérer le url et dispatcher les données vers cet url: boucle de data: y faire request.setAttribute, si non --> retourner "non reconnu"
-      Côté Test: 
-         Les méthodes des controlleurs qui seront annotées ont pour type de retour "String" ou "ModelView"
-- sprint 5:
-   Rh misy url mitov d manao Exception, rh ohtr k tss anilay package controller d misy Exception,na ko oe vide n ao anatinilay package de misy Exception, d n type de retour an fonction rh ohtr k ts mitov amin String na ModelView d misy Exception ko
-- sprint 6:
-   methode get avec params
+- **SPRINT 1 :** afficher les listes de controllers annoter an Annotation_controller
+- **SPRINT 2 :** Annotation des controllers -> classe: Annotation controller
+- **SPRINT 3 :** liste controller -> url + nom de la classe controller + methode appelée 
+- **SPRINT 4 :**
+   1. Objectif: Envoyer des données du controller vers view
+   2. Etapes:
+      - __Côté Framework :__
+         1. créer une classe ``ModelView`` qui aura pour attributs :
+            - ``String url`` : url de destination des données (page `JSP`)
+            - `HashMap<String, Object> data`: `String` le clé et `Object` la valeur, (donnée à envoyer vers view ou les page `JSP`)
+         2. créer une fonction `public voic AddObject (String, Object)` dans la classe ``ModelView`` qui ajoute des données dans ``HashMap <String, Object> data``
+         3. Dans la classe ``mg.ITU.SPRINT.servlets.FrontController`` -> methode ``ProcessRequest``, récupérer les données issues de la méthode annotée ``Get``
+            - si les data sont de type ``String`` -> retourner la valeur directement, 
+            - si les données sont de type ``ModelView`` -> récupérer le url et dispatcher les données vers cet url (page), boucler le `HashMap <String, Object> data` et fait ``request.setAttribute (String, Object)``
+            - si non --> retourner "non reconnu"
+      - __Côté Test :__ Les méthodes des controlleurs qui seront annotées ont pour type de retour "String" ou "ModelView"
+- **SPRINT 5 :**
+   1. Raha ohatra ka misy url mitovy dia manao Exception, 
+   2. Raha ohatra ka tsy misy an'ilay package ``controller`` dia manao Exception,
+   3. Na koa hoe vide ny ao anatin'ilay package de manao Exception, 
+   4. Ny type de retour an'ilay fonction raha ohatra ka tsy mitovy amin'ny ``String`` na ``ModelView`` dia manao Exception
+- **SPRINT 6 :** methode ``get`` avec params
    utilisation: /uri?param1=value&&param2=value
    * on separe les parametres par '&' et on met '?' avant d'ajouter les parametres
    * on utilise une library Paranamer
