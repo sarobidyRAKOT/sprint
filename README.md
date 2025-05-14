@@ -11,9 +11,7 @@
 - Taper `ant` dans le repertoire racine
 
 ### DETAILS ...
-- sprint 0:
-   test gitHub
-   affiche url dans index (/)
+- **SPRINT 0 :** test gitHub et afficher url dans index (/)
 - sprint 1:
    afficher les listes de controllers annoter an Annotation_controller
 - sprint 2:
