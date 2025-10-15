@@ -10,7 +10,7 @@
     <property name="src.java.dir" value="${basedir}/src/mg/ITU/SPRINT"/>
     <property name="lib.dir" value="${basedir}/lib"/>
     <!-- <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 6/Frame work/POC/Ticketing/lib"/> -->
-    <property name="dest-jarFile" value="D:/STADY/IT University/Semestre 6/Frame work/SPRINT/test/lib"/>
+    <property name="dest-jarFile" value="${basedir}/../../POC/Ticketing/lib"/>
 
 
     <path id="classpath" >

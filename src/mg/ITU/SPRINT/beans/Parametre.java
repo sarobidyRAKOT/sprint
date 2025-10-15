@@ -1,15 +1,13 @@
 package mg.ITU.SPRINT.beans;
 
-import java.lang.reflect.Parameter;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.lang.reflect.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import mg.ITU.SPRINT.Err.Error500;
 import mg.ITU.SPRINT.Err.Errors;
-import mg.ITU.SPRINT.annotation.Attr;
-import mg.ITU.SPRINT.annotation.Param;
-import mg.ITU.SPRINT.annotation.Param_obj;
+import mg.ITU.SPRINT.annotation.*;
 
 public class Parametre {
 
@@ -23,7 +21,7 @@ public class Parametre {
     }
 
 
-    public Object[] get_config_param (HttpServletRequest request) throws Errors, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+    public Object[] get_config_param (HttpServletRequest request) throws Errors, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, Error500 {
         
         /**
          * TRAITREMENT DU PARAMETRES ...
@@ -31,6 +29,7 @@ public class Parametre {
         
         Class <?> type = this.getParameter().getType();
         Object param = null;
+
 
         if (this.getParameter().isAnnotationPresent(Param.class)) {
             String value = request.getParameter(this.getParameter().getAnnotation(Param.class).value());
@@ -61,24 +60,43 @@ public class Parametre {
     }
 
 
-    private Object process_traite_ParamObj (Class <?> classe, HttpServletRequest request) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
-        Field[] attrs = classe.getDeclaredFields();
-        String value = null;
-        Object obj = classe.getConstructor().newInstance();
-
-        for (Field field : attrs) {
-            String setter_name = "set"+field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
-            if (field.isAnnotationPresent(Attr.class)) {
-                value = request.getParameter(field.getAnnotation(Attr.class).value());
-            } else {
-                value = request.getParameter(field.getName());
-            }
-
-            Method method = classe.getDeclaredMethod(setter_name, String.class);
-            method.invoke(obj, value);
+    private Object process_traite_ParamObj (Class <?> classe, HttpServletRequest request) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, Error500 {
+        
+        if (classe.isAnnotationPresent(Form_object.class)) {
+            Field[] attrs = classe.getDeclaredFields();
+            Object obj = classe.getConstructor().newInstance();
             
+            for (Field field : attrs) {
+                String setter_name = "set"+field.getName().substring(0, 1).toUpperCase() + field.getName().substring(1);
+                Object v = "";
+                Method method = null;
+
+                if (field.isAnnotationPresent(Attr.class)) {
+                    v = request.getParameter(field.getAnnotation(Attr.class).value());
+                } else if (field.isAnnotationPresent(Attr_tab.class)) {
+                    v = request.getParameterValues (field.getAnnotation(Attr_tab.class).value());                    
+                }
+                // MBOLA MISY TRAITEMENT `Object v` ra oatr ka null   
+                // System.out.println(v);
+                if (v != null) {
+                    method = classe.getDeclaredMethod(setter_name, v.getClass());                    
+                    method.invoke(obj, v);
+                }
+                
+            }
+            return obj;
+        } else {
+            throw new Error500("Le param_obj n'est pas annoter Form_obj");
         }
-        return obj;
+        // for (Field field : attrs) {
+        //     if (field.isAnnotationPresent(Attr.class)) {
+        //         value = request.getParameter(field.getAnnotation(Attr.class).value());
+        //     } else {
+        //         value = request.getParameter(field.getName());
+        //     }
+
+            
+        // }
     }
 
     public Parameter getParameter() { return parameter; }

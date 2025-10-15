@@ -33,6 +33,7 @@ import mg.ITU.SPRINT.Err.Errors;
 import mg.ITU.SPRINT.annotation.*;
 import mg.ITU.SPRINT.annotation.security.Authentified_Classe;
 import mg.ITU.SPRINT.beans.*;
+import mg.ITU.SPRINT.utils.GsonProvider;
     
 
 @MultipartConfig (
@@ -79,6 +80,7 @@ public class Front_controller extends HttpServlet {
             throws ServletException, IOException {
         verb = Verb.GET;
         processRequest(request, response);
+        BufferedReader reader = request.getReader();
     }   
 
     /** * doPost */
@@ -104,8 +106,10 @@ public class Front_controller extends HttpServlet {
             String requestURI = request.getRequestURI();
             /** lenght + 1 pour enlever `/`*/
             String url = requestURI.substring(contextPath.length());
-            // System.out.println("URL "+ url+" "+this.url_Mapping.size());
+            String referer = request.getHeader("Referer");
 
+            // System.out.println("URL "+referer +" "+url);
+            new Preced_path(referer, Verb.GET);
             // for (String u : this.url_Mapping.keySet()) {
             //     System.out.println(u);
             // }
@@ -164,7 +168,7 @@ public class Front_controller extends HttpServlet {
         
         Object object_returnFCT = traite_MethodController (className_ctrl, verbAction, request, response);
         if (verbAction.isRestAPI()) {
-            Gson gson = new Gson();
+            Gson gson = GsonProvider.getGson();
             PrintWriter out = response.getWriter();
             if (object_returnFCT != null && object_returnFCT instanceof ModelView) {
                 ModelView model_view = (ModelView) object_returnFCT;
@@ -332,6 +336,13 @@ public class Front_controller extends HttpServlet {
     private Object traite_MethodController (String className_ctrl, VerbAction verbAction, HttpServletRequest request, HttpServletResponse response) {
         
         try {
+            
+            // Enumeration<String> header = request.getHeaderNames();
+            
+            // while ((line = header.nextElement()) != null) {
+            //     System.out.println("> "+ line);
+            // }
+        
 
             Class<?> class_ctrl = Class.forName(className_ctrl);
             Object ctrl = class_ctrl.getDeclaredConstructor().newInstance();
@@ -347,7 +358,6 @@ public class Front_controller extends HttpServlet {
 
 
             if (class_ctrl.isAnnotationPresent(Authentified_Classe.class)) {
-
             }
             
             Object obj_retour = Reflexion.executeMethod_WR(ctrl, verbAction.getMethode(), params, type_params);
