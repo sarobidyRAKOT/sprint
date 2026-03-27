@@ -68,3 +68,20 @@
 - **SPRINT 15 :** *Méthode protégés par authentification*
 - **SPRINT 16 :** *Classe protégés par authentification*
 - **SPRINT 17 :** *Redirection (SEULEMENT VERS UN METHODE de verbe ou methode ``GET``)*
+
+## HOW TO BUILD JAR
+
+1. Change jar name and destignation dir
+
+   ```xml
+      <!-- CHANGE THOSE TWO PROPERTIES -->
+      <property name="jar-name" value="sprint-16.jar"/>
+      <property name="dest-jarFile" value="${basedir}/../../POC/Ticketing/lib"/>
+
+   ```
+
+2. Build jar file - check in the dest dir
+
+   ```bash
+      ant
+   ```

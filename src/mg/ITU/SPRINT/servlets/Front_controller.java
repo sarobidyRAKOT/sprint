@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.nio.file.*;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,6 +34,7 @@ import mg.ITU.SPRINT.Err.Errors;
 import mg.ITU.SPRINT.annotation.*;
 import mg.ITU.SPRINT.annotation.security.Authentified_Classe;
 import mg.ITU.SPRINT.beans.*;
+import mg.ITU.SPRINT.loader.LoaderJson;
 import mg.ITU.SPRINT.utils.GsonProvider;
     
 
@@ -52,27 +54,25 @@ public class Front_controller extends HttpServlet {
 
     @Override
     public void init(ServletConfig config) throws ServletException {
-        
-        
         super.init(config);
+
+
         this.package_name = config.getInitParameter("package_controllers");
         
+        if (this.package_name.isEmpty()) {
+            System.err.println(LocalDateTime.now() + " ERROR [init] Package_controllers vide dans le web.xml");
+            System.exit(0);
+        }
+        
         try {
-            this.package_name.isEmpty(); 
-            // reflexion = new Reflexion();
-            url_Mapping = new HashMap<String, Mapping> ();
             
+            url_Mapping = new HashMap<String, Mapping> ();
             this.check_controller(package_name);
-            // System.out.println("INIT _________________________________");
-        } catch (NullPointerException e) {
-            e.printStackTrace();
         } catch (Error500 e) {
             error500 = e;
             e.printStackTrace();
         }
     }
-
-
 
     /*** doGet */
     @Override
@@ -80,7 +80,7 @@ public class Front_controller extends HttpServlet {
             throws ServletException, IOException {
         verb = Verb.GET;
         processRequest(request, response);
-        BufferedReader reader = request.getReader();
+        // BufferedReader reader = request.getReader();
     }   
 
     /** * doPost */
@@ -94,29 +94,38 @@ public class Front_controller extends HttpServlet {
 
     
 
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+
+        String contextPath = request.getContextPath();
+        String requestURI = request.getRequestURI();
+
+        if (requestURI.startsWith(contextPath + "/assets/") ||
+            requestURI.startsWith(contextPath + "/.well-known/")) {
+            // Redirige vers le servlet par défaut de Tomcat
+            getServletContext()
+                .getNamedDispatcher("default")
+                .forward(request, response);
+            return;
+        }
 
         response.setContentType("application/json;charset=UTF-8");
         if (error500 instanceof Error500) {
             response.setContentType("text/html;charset=UTF-8");
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.getWriter().write(Front_controller.HTML500(Front_controller.error500.getMessage()));
-        } else {
-            String contextPath = request.getContextPath();
-            String requestURI = request.getRequestURI();
-            /** lenght + 1 pour enlever `/`*/
-            String url = requestURI.substring(contextPath.length());
-            String referer = request.getHeader("Referer");
+            return;
+        } 
 
-            // System.out.println("URL "+referer +" "+url);
-            new Preced_path(referer, Verb.GET);
-            // for (String u : this.url_Mapping.keySet()) {
-            //     System.out.println(u);
-            // }
+        /** lenght + 1 pour enlever `/`*/
+        String url = requestURI.substring(contextPath.length());
+        String referer = request.getHeader("Referer");
 
-            Mapping mapping = this.url_Mapping.get(url);
-            this.traite_mapping(request, response, url, mapping, this.verb);
-        }
+        new Preced_path(referer, Verb.GET);
+
+        Mapping mapping = this.url_Mapping.get(url);
+            
+        this.traite_mapping(request, response, url, mapping, this.verb);
+        
     }
 
     // EXECUTION MAPPING ...
@@ -168,7 +177,7 @@ public class Front_controller extends HttpServlet {
         
         Object object_returnFCT = traite_MethodController (className_ctrl, verbAction, request, response);
         if (verbAction.isRestAPI()) {
-            Gson gson = GsonProvider.getGson();
+            Gson gson = LoaderJson.Json();
             PrintWriter out = response.getWriter();
             if (object_returnFCT != null && object_returnFCT instanceof ModelView) {
                 ModelView model_view = (ModelView) object_returnFCT;
@@ -391,7 +400,13 @@ public class Front_controller extends HttpServlet {
             // traitement model view
             ModelView model_view = (ModelView) obj_retour;
 
-            dispatcher = request.getRequestDispatcher(model_view.getUrl());
+            String url = model_view.getUrl();
+
+            if(!url.startsWith("/")){
+                url = "/" + url;
+            }
+            dispatcher = request.getRequestDispatcher(url);
+
             model_view.getData().forEach((cle, valeur) -> {
                 request.setAttribute(cle, valeur);
             });

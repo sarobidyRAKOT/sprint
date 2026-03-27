@@ -2,3 +2,5 @@ change_jdk.bat
 /build
 /dist
 /.vscode
+
+/build-jar/build-jar.xml
