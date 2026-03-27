@@ -35,7 +35,6 @@ import mg.ITU.SPRINT.annotation.*;
 import mg.ITU.SPRINT.annotation.security.Authentified_Classe;
 import mg.ITU.SPRINT.beans.*;
 import mg.ITU.SPRINT.loader.LoaderJson;
-import mg.ITU.SPRINT.utils.GsonProvider;
     
 
 @MultipartConfig (

@@ -1,7 +1,5 @@
 package mg.ITU.SPRINT.beans;
 
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.lang.reflect.*;
 
 import jakarta.servlet.http.HttpServletRequest;
